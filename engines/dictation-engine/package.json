@@ -1,0 +1,11 @@
+{
+  "name": "buytuk-dictation-engine",
+  "version": "1.0.0",
+  "description": "BuyTuk Academy Dictation Engine Foundation (CORE-14) - deterministic measurement, diff comparison, ar/en language policies, evidence emission via canonical Evidence Writer. No ML/LLM, no autonomous decisions, no own storage.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

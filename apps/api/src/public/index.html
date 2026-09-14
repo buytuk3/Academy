@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BuyTuk Academy — بوابة الدخول والتعلم</title>
+  <link rel="stylesheet" href="/ui/styles.css" />
+</head>
+<body>
+  <header id="app-header" class="hidden">
+    <div class="brand">🎓 BuyTuk Academy</div>
+    <div class="header-actions">
+      <div id="header-user" class="muted"></div>
+      <button id="header-logout" class="link hidden" type="button">تسجيل خروج آمن</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="view-login" class="view card">
+      <h1>الدخول الآمن</h1>
+      <p class="muted">يمكنك الدخول كطالب عبر الهوية الرسمية، أو كعضو فريق عبر البريد وكلمة المرور. الجلسة تُحفَظ محليًا وتُجدَّد عبر refresh token عندما يكون ذلك مدعومًا.</p>
+      <div class="auth-switcher">
+        <button id="switch-student" class="primary" type="button">دخول الطالب</button>
+        <button id="switch-staff" class="secondary" type="button">دخول الفريق</button>
+      </div>
+
+      <form id="login-form">
+        <div id="student-login-fields">
+          <label>معرّف المستأجر (Tenant ID)
+            <input id="login-tenant" type="text" placeholder="X-Tenant-Id" required />
+          </label>
+          <label>معرّف هوية الطالب (Identity ID)
+            <input id="login-identity" type="text" placeholder="identityId" required />
+          </label>
+        </div>
+        <div id="staff-login-fields" class="hidden">
+          <label>البريد الإلكتروني
+            <input id="login-email" type="email" placeholder="teacher@buytuk.local" autocomplete="username" />
+          </label>
+          <label>كلمة المرور
+            <input id="login-password" type="password" placeholder="********" autocomplete="current-password" />
+          </label>
+        </div>
+        <button type="submit" class="primary">دخول</button>
+      </form>
+      <div class="auth-links">
+        <button id="show-forgot-password" class="link" type="button">نسيت كلمة المرور</button>
+      </div>
+      <div id="login-error" class="error hidden"></div>
+      <div id="login-success" class="notice hidden"></div>
+      <p class="muted small">ملاحظة: تسجيل الحسابات الجديدة من الواجهة غير مدعوم بعد، لكن مسارات login / refresh / logout / forgot-password أصبحت موصولة فعليًا.</p>
+    </section>
+
+    <section id="view-forgot-password" class="view card hidden">
+      <button class="link" data-nav="login">← عودة للدخول</button>
+      <h1>استعادة كلمة المرور</h1>
+      <p class="muted">أدخل البريد الإلكتروني لاستلام رمز إعادة التعيين من الـ API. في بيئة التطوير فقط قد يُعاد الرمز في الاستجابة لتسهيل التحقق اليدوي.</p>
+      <form id="forgot-password-form">
+        <label>البريد الإلكتروني
+          <input id="forgot-email" type="email" placeholder="teacher@buytuk.local" required />
+        </label>
+        <button type="submit" class="primary">إرسال طلب الاستعادة</button>
+      </form>
+      <form id="reset-password-form" class="stack hidden">
+        <label>رمز إعادة التعيين
+          <input id="reset-token" type="text" placeholder="reset token" />
+        </label>
+        <label>كلمة المرور الجديدة
+          <input id="reset-password" type="password" placeholder="8 أحرف على الأقل" autocomplete="new-password" />
+        </label>
+        <button type="submit" class="primary">تحديث كلمة المرور</button>
+      </form>
+      <div id="forgot-password-result" class="notice hidden"></div>
+      <div id="forgot-password-error" class="error hidden"></div>
+    </section>
+
+    <section id="view-dashboard" class="view hidden">
+      <div class="card">
+        <h1>لوحة المستخدم</h1>
+        <div id="dash-meta" class="muted small"></div>
+        <div id="dash-progress" class="row-of-cards"></div>
+      </div>
+      <div class="card">
+        <h2>ما يجب أن تتعلمه اليوم (التوصية التالية)</h2>
+        <div id="dash-next"></div>
+      </div>
+      <div class="card">
+        <h2>الدروس المتاحة</h2>
+        <div id="dash-lessons"></div>
+      </div>
+      <div class="card">
+        <h2>نقاط القوة</h2><div id="dash-strengths"></div>
+        <h2>نقاط الضعف</h2><div id="dash-weaknesses"></div>
+        <h2>الفجوات</h2><div id="dash-gaps"></div>
+      </div>
+      <div class="card">
+        <h2>الإتقان (Mastery)</h2><div id="dash-mastery"></div>
+      </div>
+      <div class="card">
+        <h2>آخر الأنشطة</h2><div id="dash-recent"></div>
+      </div>
+      <div class="card">
+        <h2>كل التوصيات</h2><div id="dash-recommendations"></div>
+      </div>
+      <div class="card">
+        <h2>نموذج المتعلم (تفصيلي)</h2><div id="dash-model"></div>
+      </div>
+    </section>
+
+    <section id="view-lesson" class="view hidden">
+      <div class="card">
+        <button class="link" data-nav="dashboard">← عودة للوحة</button>
+        <h1 id="lesson-title"></h1>
+        <div id="lesson-meta" class="muted small"></div>
+        <h2>أنشطة الدرس</h2>
+        <div id="lesson-exercises"></div>
+      </div>
+    </section>
+
+    <section id="view-activity" class="view hidden">
+      <div class="card">
+        <button class="link" data-nav="lesson">← عودة للدرس</button>
+        <h1 id="activity-title"></h1>
+        <div id="activity-meta" class="muted small"></div>
+        <div id="activity-body"></div>
+        <form id="activity-form">
+          <div id="activity-text-mode">
+            <label>إجابتك
+              <input id="activity-answer" type="text" autocomplete="off" />
+            </label>
+          </div>
+          <div id="activity-voice-mode" class="hidden voice-box">
+            <div class="notice">هذا النشاط يستخدم ملفًا صوتيًا حقيقيًا من جهاز الطالب ثم يرفعه عبر رابط آمن قبل إرسال المحاولة.</div>
+            <label>ملف القراءة الصوتي
+              <input id="activity-audio-file" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" />
+            </label>
+            <div id="activity-voice-meta" class="muted small"></div>
+            <div id="activity-upload-status" class="muted small"></div>
+          </div>
+          <button id="activity-submit" type="submit" class="primary">إرسال المحاولة</button>
+        </form>
+        <div id="activity-notice" class="notice hidden"></div>
+        <div id="activity-error" class="error hidden"></div>
+      </div>
+      <div class="card hidden" id="result-card">
+        <h2>النتيجة</h2>
+        <div id="activity-result"></div>
+        <div id="result-actions"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="muted small center">
+    BuyTuk Academy — عميل رقيق فوق الـ APIs الرسمية. كل ما يُعرض هنا يأتي من النظام الحقيقي.
+  </footer>
+
+  <script src="/ui/app.js"></script>
+</body>
+</html>

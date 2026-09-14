@@ -1,0 +1,11 @@
+{
+  "name": "buytuk-assessment-engine",
+  "version": "1.0.0",
+  "description": "BuyTuk Academy Assessment / Student Readiness Engine Foundation (CORE-16) - deterministic assessment evaluation (Definition/Attempt/Response/Measurement separation), rubric-scoped scoring only, readiness states, evidence emission via canonical Evidence Writer. No ML/LLM, no auto-delivery, no own storage.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

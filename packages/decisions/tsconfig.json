@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@buytuk/contracts": ["../../packages/contracts/src/index.ts"],
+      "@workspace/db": ["../../packages/database/src/index.ts"],
+      "@workspace/security": ["../../packages/security/src/index.ts"],
+      "@workspace/events": ["../../packages/events/src/index.ts"],
+      "@workspace/observability": ["../../packages/observability/src/index.ts"],
+      "@workspace/config": ["../../packages/config/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts"]
+}

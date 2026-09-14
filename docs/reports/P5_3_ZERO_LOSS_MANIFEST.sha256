@@ -1,0 +1,13 @@
+# P5.3 ZERO-LOSS MANIFEST (W1+W2) | baseline 6de79ca | W1 5121c52 | W2 4c581ef | NO TAG
+# [A] Wave2 canonical additions (live SHA):
+8addf05265c99b582e87a4bc400f301ec08c69aaafaf635e90fb158175ca5d50  engines/reading-engine/src/service/reading-service.ts
+411f96262f6e4389ab81f02950dc04b831cb7fa1c1e8dcdfa36417c9fb8455c0  apps/api/src/routes/reading.ts
+# [B] Wave2 deleted legacy files (SHA pre-delete):
+ceaaa16c6dfdbcb2d08047bc678a37029ace76f3546900240eb95f9c52bf7161  engines/reading-engine/src/http/routes.ts
+d5586d2aba0256239cb7eb6eaa9216133d1da414fcc64b48d814854ef5a2f273  engines/reading-engine/src/middleware/auth.ts
+865a9e3e0dec1cc7ff5b59c4dd62fde4dc034c366949d013617078d5c1580e99  engines/reading-engine/src/security/compat.ts
+# [C] Wave1 retained transitional shims (deletion deferred, consumers>0):
+dc46fcf41df2153be4777f9c576f9e30adc73aecb636f2bc97e361336bd2ca17  engines/reading-engine/src/observability/logger.ts
+4abe99e4e7f4ce49980436ea848bae0e4e7fcaba9e520317d3c9cbb266e8ae28  engines/reading-engine/src/observability/metrics.ts
+f899e05eb0f99c4bc57083ed9f74ecddb5636af3297d01ce70841d9bf14625f8  engines/reading-engine/src/queue/bullmq.ts
+a02e44f33259119a000fc4830f0036ee67758b1402c272916025473c92e89434  engines/reading-engine/src/db/index.ts

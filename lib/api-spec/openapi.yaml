@@ -1,0 +1,524 @@
+openapi: 3.0.3
+info:
+  title: BuyTuk Academy Platform API
+  version: 1.0.0
+  description: >
+    OpenAPI 3 contract for the BuyTuk platform (P4.7 / C-A5, aligned in CORE-02F).
+    Auth flows follow D-03 (15-min access + rotating refresh). All reading
+    identifiers are canonical UUID/text — the identity contract is uuid from
+    HTTP down to the database (CORE-02A/02E); tenant context is explicit and
+    derived from the access token (CORE-02C). Engine domain DTOs live in
+    packages/contracts; the paths below are the application-layer surface.
+    Automated regeneration via orval runs in CI.
+paths:
+  /healthz:
+    get:
+      operationId: getHealthz
+      summary: Liveness probe
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Health status (db / redis / inference)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /api/metrics:
+    get:
+      operationId: getMetrics
+      summary: Prometheus metrics (text/plain)
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/passages:
+    get:
+      operationId: listPassages
+      summary: List reading passages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: classroomId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: grade
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Passage' }
+    post:
+      operationId: createPassage
+      summary: Create a reading passage (teacher/principal/admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePassageRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Passage' }
+        '400':
+          description: Validation failed
+        '403':
+          description: Insufficient permissions
+  /api/passages/{id}:
+    get:
+      operationId: getPassage
+      summary: Get a passage by uuid
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Passage' }
+        '404':
+          description: Not found
+  /api/sessions/student/{studentId}:
+    get:
+      operationId: listSessionsByStudent
+      summary: List reading sessions for a student (chronological)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReadingSession' }
+  /api/attempts/{id}:
+    get:
+      operationId: getAttempt
+      summary: Get a reading attempt by uuid
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attempt' }
+        '404':
+          description: Not found
+  /api/analyze:
+    post:
+      operationId: enqueueAnalysis
+      summary: Enqueue a reading analysis job (teacher/principal/admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyzeRequest' }
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyzeAccepted' }
+        '400':
+          description: Validation failed
+        '403':
+          description: Insufficient permissions
+  /api/analyze/{jobId}:
+    get:
+      operationId: getAnalysisJob
+      summary: Poll an analysis job status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          description: Job not found
+  /api/reports/student/{studentId}:
+    get:
+      operationId: listReportsByStudent
+      summary: List reports for a student
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Report' }
+  /api/reports/{id}:
+    get:
+      operationId: getReport
+      summary: Get a report by uuid
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '404':
+          description: Not found
+  /api/audio/presign:
+    get:
+      operationId: presignAudio
+      summary: Presign an S3 URL for audio upload/download
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema: { type: string }
+        - name: op
+          in: query
+          required: false
+          schema: { type: string, enum: [getObject, putObject], default: getObject }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url: { type: string }
+        '400':
+          description: key required
+        '500':
+          description: Presign failed
+  /api/auth/register:
+    post:
+      operationId: register
+      summary: Create a user and issue a token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Validation failed
+        '409':
+          description: Email already in use
+  /api/auth/login:
+    post:
+      operationId: login
+      summary: Exchange credentials for a token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '401':
+          description: Invalid credentials
+  /api/auth/refresh:
+    post:
+      operationId: refresh
+      summary: Rotate a refresh token (family+jti, reuse revokes family)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid or expired refresh token
+  /api/auth/logout:
+    post:
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+  /api/auth/me:
+    get:
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthCheckResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    HealthStatus:
+      type: object
+      required: [ok, version]
+      properties:
+        ok: { type: boolean }
+        version: { type: string }
+        db: { type: boolean }
+        redis: { type: boolean }
+        inference: { type: boolean }
+    RoleEnum:
+      type: string
+      enum: [admin, principal, teacher, student, parent]
+    SessionTypeEnum:
+      type: string
+      enum: [reading, dictation, writing, pronunciation, fluency, thinking]
+    SessionStatusEnum:
+      type: string
+      enum: [draft, completed, reviewed]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Passage:
+      type: object
+      required: [id, tenantId, title, text]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        teacherId: { type: string, format: uuid, nullable: true }
+        classroomId: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        text: { type: string }
+        difficulty: { type: integer, default: 1 }
+        grade: { type: string, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreatePassageRequest:
+      type: object
+      required: [title, text]
+      properties:
+        title: { type: string }
+        text: { type: string }
+        difficulty: { type: integer, minimum: 1, maximum: 10 }
+        grade: { type: string }
+        classroomId: { type: string, format: uuid }
+        teacherId: { type: string, format: uuid }
+    ReadingSession:
+      type: object
+      required: [id, tenantId, studentId]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        teacherId: { type: string, format: uuid, nullable: true }
+        sessionType: { $ref: '#/components/schemas/SessionTypeEnum' }
+        rawScore: { type: integer, nullable: true }
+        fluencyScore: { type: number, nullable: true }
+        comprehensionScore: { type: number, nullable: true }
+        pronunciationScore: { type: number, nullable: true }
+        durationSeconds: { type: integer, nullable: true }
+        status: { $ref: '#/components/schemas/SessionStatusEnum' }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Attempt:
+      type: object
+      required: [id, tenantId, sessionId, studentId, passageId]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        passageId: { type: string, format: uuid }
+        audioKey: { type: string, nullable: true }
+        transcript: { type: string, nullable: true }
+        durationSec: { type: number, nullable: true }
+        jobId: { type: string, nullable: true }
+        jobStatus: { type: string, nullable: true }
+        correlationId: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Report:
+      type: object
+      required: [id, tenantId, attemptId, overallScore]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        attemptId: { type: string, format: uuid }
+        overallScore: { type: number }
+        accuracyScore: { type: number }
+        pronunciationScore: { type: number }
+        fluencyScore: { type: number }
+        prosodyScore: { type: number }
+        wpm: { type: number }
+        data: { type: object }
+        createdAt: { type: string, format: date-time }
+    AnalyzeRequest:
+      type: object
+      required: [studentId, passageId, sessionId, audioKey]
+      properties:
+        studentId: { type: string, format: uuid }
+        passageId: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        audioKey: { type: string }
+        expectedText: { type: string }
+    AnalyzeAccepted:
+      type: object
+      required: [jobId, attemptId]
+      properties:
+        jobId: { type: string }
+        attemptId: { type: string, format: uuid }
+    RegisterRequest:
+      type: object
+      required: [tenantId, firstName, lastName, email, password]
+      properties:
+        tenantId: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        role: { $ref: '#/components/schemas/RoleEnum', default: teacher }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+    UserResponse:
+      type: object
+      required: [id, tenantId, firstName, lastName, email, role]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/RoleEnum' }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    RegisterResponse:
+      allOf:
+        - $ref: '#/components/schemas/TokenPair'
+        - type: object
+          required: [user]
+          properties:
+            user: { $ref: '#/components/schemas/UserResponse' }

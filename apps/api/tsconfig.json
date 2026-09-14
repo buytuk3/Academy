@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths":{
+      "@buytuk/contracts": ["../../packages/contracts/src/index.ts"],
+      "@workspace/config": ["../../packages/config/src/index.ts"],
+      "@workspace/observability": ["../../packages/observability/src/index.ts"],
+      "@workspace/security": ["../../packages/security/src/index.ts"],
+      "@workspace/queue": ["../../packages/queue/src/index.ts"],
+      "@workspace/db": ["../../packages/database/src/index.ts"],
+      "@workspace/intelligence": ["../../packages/intelligence/src/index.ts"],
+      "@workspace/decisions": ["../../packages/decisions/src/index.ts"],
+      "@workspace/events": ["../../packages/events/src/index.ts"],
+      "@workspace/api-zod": ["../../lib/api-zod/src/index.ts"],
+      "@reading-engine/*": ["../../engines/reading-engine/src/*"],
+      "@dictation-engine": ["../../engines/dictation-engine/src/index.ts"],
+      "@dictation-engine/*": ["../../engines/dictation-engine/src/*"],
+      "@numeracy-engine": ["../../engines/numeracy-engine/src/index.ts"],
+      "@assessment-engine": ["../../engines/assessment-engine/src/index.ts"],
+      "@workspace/curriculum": ["../../packages/curriculum/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

@@ -1,0 +1,142 @@
+/* BuyTuk Academy — Student UI (thin client, ACR-E5-001) */
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  background: #f4f6fb;
+  color: #1d2433;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  background: #1e3a5f;
+  color: #fff;
+  padding: 0.7rem 1.4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+header .brand { font-weight: 700; font-size: 1.1rem; }
+header .muted { color: #c7d4e6; }
+main { flex: 1; padding: 1.2rem; max-width: 880px; width: 100%; margin: 0 auto; }
+.card {
+  background: #fff;
+  border: 1px solid #e2e7f0;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(20, 40, 80, 0.06);
+}
+h1 { font-size: 1.35rem; margin: 0.2rem 0 0.8rem; }
+h2 { font-size: 1.05rem; margin: 0.9rem 0 0.5rem; color: #24457a; }
+label { display: block; margin: 0.7rem 0; font-weight: 600; font-size: 0.95rem; }
+input {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #cfd8e6;
+  border-radius: 8px;
+  font-size: 0.96rem;
+  background: #fff;
+}
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.72rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+button.primary {
+  background: #1f6fd1;
+  color: #fff;
+  font-weight: 700;
+}
+button.primary:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+button.link {
+  background: transparent;
+  color: #1f6fd1;
+  padding: 0;
+  margin-bottom: 0.8rem;
+}
+.row-of-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 0.7rem;
+}
+.stat {
+  background: #f7f9fd;
+  border: 1px solid #e0e7f2;
+  border-radius: 10px;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.item {
+  border: 1px solid #ebeff7;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin: 0.6rem 0;
+  background: #fafbfd;
+}
+.title { font-weight: 700; }
+.badge {
+  display: inline-block;
+  margin-inline-start: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #e7eef9;
+  color: #2c4d7b;
+  font-size: 0.8rem;
+}
+.badge.strong { background: #e4f5e8; color: #1a6a34; }
+.badge.improving { background: #fff4d9; color: #8d6200; }
+.badge.insufficient, .badge.weak { background: #fde7e7; color: #9f2c2c; }
+.notice, .error, .muted {
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  margin-top: 0.7rem;
+}
+.notice { background: #eef5ff; color: #204f93; }
+.error { background: #fdecec; color: #9a1d1d; }
+.muted { color: #58677d; }
+.small { font-size: 0.85rem; }
+.center { text-align: center; padding: 1rem 0; }
+.hidden { display: none !important; }
+.voice-box {
+  border: 1px dashed #b8c8e3;
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  background: #fff;
+}
+th, td {
+  border: 1px solid #e7edf6;
+  padding: 0.55rem 0.6rem;
+  text-align: right;
+  vertical-align: top;
+}
+th {
+  background: #f5f8fc;
+  color: #28456f;
+}
+@media (max-width: 640px) {
+  main { padding: 0.8rem; }
+  .card { padding: 0.85rem; }
+}
+
+.header-actions { display:flex; gap:.75rem; align-items:center; }
+.auth-switcher { display:flex; gap:.6rem; margin:1rem 0; flex-wrap:wrap; }
+.auth-links { display:flex; justify-content:flex-start; margin-top:.5rem; }
+.secondary { background:#e7eef9; color:#28456f; font-weight:700; }
+.stack { display:flex; flex-direction:column; gap:.7rem; margin-top:1rem; }

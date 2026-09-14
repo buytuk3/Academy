@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths":{
+      "@buytuk/contracts": ["../../packages/contracts/src/index.ts"],
+      "@workspace/config": ["../../packages/config/src/index.ts"],
+      "@workspace/observability": ["../../packages/observability/src/index.ts"],
+      "@workspace/security": ["../../packages/security/src/index.ts"],
+      "@workspace/queue": ["../../packages/queue/src/index.ts"],
+      "@workspace/db": ["../../packages/database/src/index.ts"],
+      "@workspace/events": ["../../packages/events/src/index.ts"],
+      "@workspace/decisions": ["../../packages/decisions/src/index.ts"],
+      "@/*": ["../../engines/reading-engine/src/*"],
+      "@config/*": ["../../engines/reading-engine/config/*"],
+      "@pipeline/*": ["../../engines/reading-engine/src/pipeline/*"],
+      "@engines/*": ["../../engines/reading-engine/src/engines/*"],
+      "@queue/*": ["../../engines/reading-engine/src/queue/*"],
+      "@middleware/*": ["../../engines/reading-engine/src/middleware/*"],
+      "@security/*": ["../../engines/reading-engine/src/security/*"],
+      "@observability/*": ["../../engines/reading-engine/src/observability/*"],
+      "@realtime/*": ["../../engines/reading-engine/src/realtime/*"],
+      "@exercises/*": ["../../engines/reading-engine/src/exercises/*"],
+      "@report/*": ["../../engines/reading-engine/src/report/*"],
+      "@types/*": ["../../engines/reading-engine/src/types/*"],
+      "@engine/analyze-processor": ["../../engines/reading-engine/src/queue/workers/analyze.processor"]
+    },
+    "moduleResolution": "bundler"
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*"
+  ]
+}

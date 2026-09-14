@@ -1,0 +1,29 @@
+{
+  "name": "buytuk-worker",
+  "version": "0.1.7",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@workspace/config": "workspace:*",
+    "@workspace/observability": "workspace:*",
+    "@workspace/queue": "workspace:*",
+    "bullmq": "^5.7.0",
+    "ioredis": "^5.4.1",
+    "dotenv": "^16.4.5",
+    "@workspace/db": "workspace:*",
+    "@buytuk/contracts": "workspace:*",
+    "@workspace/curriculum": "workspace:*",
+    "@workspace/decisions": "workspace:*",
+    "@workspace/intelligence": "workspace:*",
+    "@workspace/learning-loop": "workspace:*"
+  }
+}

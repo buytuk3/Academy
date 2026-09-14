@@ -1,0 +1,148 @@
+=== GIT ROOT ===
+/home/user/audit/v2.7.1
+
+=== HEAD ===
+c255fe59953da019551aac03bb5ecd483b7f6d3a
+
+=== BRANCH ===
+p2-real-inference
+
+=== TAGS ===
+buytuk-v01.2
+buytuk-v01.3
+core-08-approved
+core-09-approved
+core-10-approved
+core-11-approved
+core-15-checkpoint
+core26c-zib-baseline
+core26c-zib-final
+core26c-zib-fix8b
+core26c-zib-recovery-fix5
+core27-batch3-fixed
+core27-r027-05-fixed
+core27-v3-integrated
+core28-e1-teacher-runtime
+core29-e2-learner-model
+core30-e3-p0-progress-recommendations
+core31-acr-e4-002
+core31-e4-p0-student-loop
+core32-p1-student-ui
+core33-p2-real-llm-path
+merge-p1
+merge-p2
+merge-p2-approved
+merge-p3-candidate
+merge-p4-candidate
+pre-merge
+
+=== STATUS PORCELAIN ===
+?? docs/reports/V0.1.3-FINAL-INVENTORY.txt
+
+=== LOG buytuk-v01.2..HEAD --stat ===
+commit c255fe59953da019551aac03bb5ecd483b7f6d3a
+Author: genspark_dev <genspark_dev@genspark.ai>
+Date:   Mon Sep 14 08:01:40 2026 +0000
+
+    chore(release): finalize BuyTuk.V.01.3 manifest integrity
+
+ MANIFEST.sha256 | 1 -
+ 1 file changed, 1 deletion(-)
+
+commit 90f1efcd1ba639990bc80555bf812fd727dfa131
+Author: genspark_dev <genspark_dev@genspark.ai>
+Date:   Mon Sep 14 08:01:05 2026 +0000
+
+    docs/release: consolidate BuyTuk.V.01.3 and preserve P2-VOICE inspection artifacts
+
+ CHANGELOG.md                                       |   20 +-
+ EXPORT_README.md                                   |   29 +-
+ MANIFEST.sha256                                    | 1045 ++++++++++----------
+ ...R-24-001-PERSISTENT-CONTENT-EXERCISE-LIBRARY.md |    5 +
+ ...PERSISTENT-ACTIVITY-ASSIGNMENT-ATTEMPT-STATE.md |    5 +
+ .../ACR-E1-001-V3-LOOP-RESUME-EXTENSION.md         |    5 +
+ .../ACR-E4-001-MASTERY-WRITE-GENERALIZATION.md     |    5 +
+ .../ACR-E4-002-CORE05-BOUNDARY-TESTINFRA.md        |    5 +
+ .../ACR-E5-001-P1-STUDENT-UI-THIN-CLIENT.md        |    5 +
+ docs/decisions/ACR-E6-001-P2-REAL-LLM-PATH.md      |    5 +
+ docs/decisions/ADR-001-R008-MIGRATION-STRATEGY.md  |    5 +
+ .../ADR-002-R009-STUDENT-TRANSFER-IDENTITY.md      |    5 +
+ .../ADR-003-CHILD-DATA-RETENTION-FUTURE.md         |    5 +
+ ...E24-PERSISTENCE-OWNERSHIP-AND-MEDIA-BOUNDARY.md |    5 +
+ docs/decisions/ADR-027-V3-RUNTIME-INTEGRATION.md   |    5 +
+ docs/decisions/ARCHITECTURE_CONTRACT.md            |    5 +
+ docs/decisions/MOD-001_INTEGRATION_PLAN.md         |    5 +
+ docs/decisions/P2_DATABASE_FORENSIC_REPORT.md      |    5 +
+ docs/decisions/P3_INFRASTRUCTURE_DECISIONS.md      |    5 +
+ .../P4_APPLICATION_COMPOSITION_DECISIONS.md        |    5 +
+ docs/decisions/P5_1_DECISIONS.md                   |    5 +
+ docs/decisions/P5_3_DECISIONS.md                   |    5 +
+ docs/decisions/P5_DECISIONS.md                     |    5 +
+ docs/reference/BUY-TUK-ACADEMY-V1.0.0.md           |    3 +
+ docs/reference/DOCUMENT-V1-COMPLIANCE-AUDIT.md     |   21 +-
+ docs/reference/EXECUTION-REFERENCE.md              |   15 +-
+ docs/reference/PROJECT_VERSION.md                  |   66 +-
+ .../V0.1.3-CONSOLIDATION-INVENTORY.md              |   48 +
+ docs/reports/E1-closure-report.md                  |    5 +
+ docs/reports/E2-closure-report.md                  |    5 +
+ docs/reports/E3-closure-report.md                  |    5 +
+ docs/reports/E4-closure-report.md                  |    5 +
+ docs/reports/P1-closure-report.md                  |    5 +
+ .../reports/P2-GATE-1-REAL-INFERENCE-INSPECTION.md |  158 +++
+ docs/reports/P2-MID-GATE.md                        |    5 +
+ docs/reports/P3_INFRASTRUCTURE_REPORT.md           |    5 +
+ docs/reports/P4_APPLICATION_COMPOSITION_REPORT.md  |    5 +
+ docs/reports/P5_0_FORENSIC_INVENTORY.md            |    5 +
+ .../P5_1_READING_ENGINE_EXTRACTION_REPORT.md       |    5 +
+ docs/reports/P5_3_CONSUMER_INVENTORY.md            |    5 +
+ docs/reports/P5_3_DECISIONS.md                     |    5 +
+ .../P5_3_HTTP_AUTH_CANONICALIZATION_REPORT.md      |    5 +
+ docs/reports/P5_CANONICALIZATION_REPORT.md         |    5 +
+ docs/reports/V0.1.3-INVENTORY-SNAPSHOT.txt         |   38 +
+ docs/reports/buytuk-academy-master-document.md     |    5 +
+ 45 files changed, 1049 insertions(+), 569 deletions(-)
+
+commit b478adf88333d970e77d83e19f824a01b4787eba
+Author: genspark_dev <genspark_dev@genspark.ai>
+Date:   Mon Sep 14 06:07:31 2026 +0000
+
+    docs: P2-MID-GATE — first real LLM path complete (GatewayLLMAdapter → Feedback RPC), mockLLMCall = absolute zero, core-33 8/8, regression 102/102 — awaiting owner approval before audio-Gateway phase
+
+ docs/reports/P2-MID-GATE.md | 47 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+
+commit d1c23cf1699651d731c465e2a2e98acce6cea7af
+Author: genspark_dev <genspark_dev@genspark.ai>
+Date:   Mon Sep 14 06:06:18 2026 +0000
+
+    P2-8 (ACR-E6-001): core-33 real-LLM-path proofs 8/8 — REAL in-process gRPC server from the production inference.proto: integration (callLLM→GatewayLLMAdapter→Feedback RPC→parsed result + x-tenant-id metadata verified), behavioral (two different real phoneme errors → different outputs from real catalog via RuleEngine — static template impossible), enforced timeout (real DEADLINE_EXCEEDED→TIMEOUT), bounded retry (2×UNAVAILABLE→success on 3rd; AUTH_REJECTED fails fast), degraded fallback (provider failure + unparseable text → degraded:true, never a fake success) + ACR-E6-001 decision record
+
+ docs/decisions/ACR-E6-001-P2-REAL-LLM-PATH.md |  45 ++++++
+ tests/core-33/p2-llm-path.test.ts             | 203 ++++++++++++++++++++++++++
+ tests/core-33/vitest.config.ts                |  38 +++++
+ 3 files changed, 286 insertions(+)
+
+commit fae2caa28c7144982680d8bb98fb7bdb412a8e67
+Author: genspark_dev <genspark_dev@genspark.ai>
+Date:   Mon Sep 14 06:06:08 2026 +0000
+
+    P2-4/P2-5 (ACR-E6-001): remove mockLLMCall from production — callLLM consumes injected LLMProvider (GatewayLLMAdapter); failure = explicit degraded:true feedback (error-safe, original instructions kept, never a fake success) + additive AIFeedback.degraded? contract field + engine vitest env pins canonical INFERENCE_PROTO_PATH
+
+ engines/reading-engine/src/engines/ai-feedback.ts | 70 +++++++++++++++++------
+ engines/reading-engine/vitest.config.ts           |  2 +-
+ packages/contracts/src/reading/types.ts           |  2 +
+ 3 files changed, 56 insertions(+), 18 deletions(-)
+
+commit e9c0a0431df0592d2c6846f1a7c8ad42b0e54e65
+Author: genspark_dev <genspark_dev@genspark.ai>
+Date:   Mon Sep 14 06:06:01 2026 +0000
+
+    P2-1/P2-2 (ACR-E6-001): LLMProvider contract + GatewayLLMAdapter (first real provider — reuses existing gRPC client + Feedback RPC) + additive client options (enforced gRPC deadline + x-tenant-id metadata; legacy callers untouched) + DI binding (additive)
+
+ engines/reading-engine/src/container.ts            |  8 +++
+ engines/reading-engine/src/engines/llm/config.ts   | 23 +++++++
+ .../src/engines/llm/gateway-adapter.ts             | 74 ++++++++++++++++++++++
+ engines/reading-engine/src/engines/llm/index.ts    |  8 +++
+ engines/reading-engine/src/engines/llm/types.ts    | 54 ++++++++++++++++
+ .../src/pipeline/inference-client.ts               | 15 ++++-
+ 6 files changed, 180 insertions(+), 2 deletions(-)

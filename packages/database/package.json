@@ -1,0 +1,29 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:generate": "node scripts/db-generate.mjs",
+    "db:drift-check": "node scripts/schema-drift-check.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@workspace/config": "workspace:*",
+    "@workspace/observability": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "^8.22.0",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "0.22.8",
+    "vitest": "^1.6.0"
+  }
+}

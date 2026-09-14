@@ -1,0 +1,1 @@
+- [Phase T-0 Auth & DB](phase-t0-auth-db.md) — JWT+bcrypt auth wired; 13-table Drizzle schema pushed; zod/v4 vs v3 pitfall documented

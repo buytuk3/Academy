@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist-types",
+    "rootDir": "../../..",
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@workspace/config": [
+        "../config/src/index.ts"
+      ],
+      "@workspace/observability": [
+        "../observability/src/index.ts"
+      ],
+      "@workspace/security": [
+        "../security/src/index.ts"
+      ],
+      "@workspace/queue": [
+        "../queue/src/index.ts"
+      ],
+      "@buytuk/contracts": [
+        "../contracts/src/index.ts"
+      ]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

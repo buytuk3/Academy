@@ -1,0 +1,599 @@
+/* BuyTuk Academy — Student/Staff UI thin client */
+"use strict";
+
+const SESSION_KEY = "buytuk.ui.session.v017";
+const state = {
+  authMode: "student",
+  tenantId: null,
+  accessToken: null,
+  refreshToken: null,
+  studentId: null,
+  user: null,
+  context: null,
+  currentLesson: null,
+  currentExercise: null,
+  attemptId: null,
+  submitted: false,
+  attemptStartedAt: null,
+  voiceUploadKey: null,
+};
+
+async function api(method, path, { body, idempotencyKey, auth = true } = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (state.tenantId) headers["X-Tenant-Id"] = state.tenantId;
+  if (auth && state.accessToken) headers["Authorization"] = `Bearer ${state.accessToken}`;
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let json = null;
+  try { json = await res.json(); } catch {}
+  return { status: res.status, ok: res.ok, json };
+}
+
+function show(viewId) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.add("hidden"));
+  document.getElementById(viewId).classList.remove("hidden");
+}
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uuid = () => crypto.randomUUID();
+const isVoiceExercise = (ex) => ex?.type === "VOICE" || ex?.engine === "READING";
+
+function slugFileName(name) {
+  const clean = String(name ?? "reading-audio.bin")
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return clean || "reading-audio.bin";
+}
+
+function persistSession() {
+  const payload = {
+    authMode: state.authMode,
+    tenantId: state.tenantId,
+    accessToken: state.accessToken,
+    refreshToken: state.refreshToken,
+    studentId: state.studentId,
+    user: state.user,
+    context: state.context,
+  };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+}
+
+function clearSessionStorage() {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    Object.assign(state, saved);
+    syncHeader();
+    return Boolean(state.accessToken);
+  } catch {
+    clearSessionStorage();
+    return false;
+  }
+}
+
+async function refreshIfPossible() {
+  if (!state.refreshToken || state.authMode === "student") return false;
+  const r = await api("POST", "/v1/auth/refresh", { body: { refreshToken: state.refreshToken }, auth: false });
+  if (r.status !== 200 || !r.json?.accessToken) return false;
+  state.accessToken = r.json.accessToken;
+  state.refreshToken = r.json.refreshToken ?? state.refreshToken;
+  state.user = r.json.user ?? state.user;
+  persistSession();
+  return true;
+}
+
+async function safeLogout() {
+  const refreshToken = state.refreshToken;
+  if (refreshToken) {
+    try {
+      await api("POST", "/v1/auth/logout", { body: { refreshToken } });
+    } catch {}
+  }
+  Object.assign(state, {
+    authMode: "student",
+    tenantId: null,
+    accessToken: null,
+    refreshToken: null,
+    studentId: null,
+    user: null,
+    context: null,
+    currentLesson: null,
+    currentExercise: null,
+    attemptId: null,
+    submitted: false,
+    attemptStartedAt: null,
+    voiceUploadKey: null,
+  });
+  clearSessionStorage();
+  syncHeader();
+  showLoginMode("student");
+  show("view-login");
+}
+
+function clearVoiceUploadUi() {
+  state.voiceUploadKey = null;
+  if ($("activity-audio-file")) $("activity-audio-file").value = "";
+  if ($("activity-upload-status")) $("activity-upload-status").textContent = "";
+  if ($("activity-voice-meta")) $("activity-voice-meta").textContent = "";
+}
+
+function setVoiceStatus(text, tone = "muted") {
+  const el = $("activity-upload-status");
+  if (!el) return;
+  el.className = `${tone} small`;
+  el.textContent = text;
+}
+
+function hideAuthMessages() {
+  $("login-error").classList.add("hidden");
+  $("login-success").classList.add("hidden");
+  $("forgot-password-error").classList.add("hidden");
+  $("forgot-password-result").classList.add("hidden");
+}
+
+function setAuthMessage(type, text) {
+  const el = $(type === "error" ? "login-error" : "login-success");
+  el.textContent = text;
+  el.classList.remove("hidden");
+}
+
+function syncHeader() {
+  const loggedIn = Boolean(state.accessToken);
+  $("app-header").classList.toggle("hidden", !loggedIn);
+  $("header-logout").classList.toggle("hidden", !loggedIn);
+  if (!loggedIn) {
+    $("header-user").textContent = "";
+    return;
+  }
+  if (state.authMode === "student") {
+    $("header-user").textContent = `طالب · ${state.studentId ?? ""}`;
+  } else {
+    $("header-user").textContent = `${state.user?.role ?? "user"} · ${state.user?.email ?? ""}`;
+  }
+}
+
+function showLoginMode(mode) {
+  state.authMode = mode;
+  $("student-login-fields").classList.toggle("hidden", mode !== "student");
+  $("staff-login-fields").classList.toggle("hidden", mode !== "staff");
+  $("login-tenant").required = mode === "student";
+  $("login-identity").required = mode === "student";
+  $("login-email").required = mode === "staff";
+  $("login-password").required = mode === "staff";
+  $("switch-student").classList.toggle("secondary", mode !== "student");
+  $("switch-student").classList.toggle("primary", mode === "student");
+  $("switch-staff").classList.toggle("secondary", mode !== "staff");
+  $("switch-staff").classList.toggle("primary", mode === "staff");
+  hideAuthMessages();
+}
+
+function voiceExpectedText(meta) {
+  return String(meta.expectedText ?? meta.passageText ?? meta.question ?? "").trim();
+}
+
+function renderVoiceMeta(meta) {
+  const bits = [];
+  if (meta.passageId) bits.push(`passageId: ${meta.passageId}`);
+  if (meta.sessionId) bits.push(`sessionId: ${meta.sessionId}`);
+  const expected = voiceExpectedText(meta);
+  if (expected) bits.push(`النص المرجعي: ${expected}`);
+  $("activity-voice-meta").textContent = bits.length === 0
+    ? "هذا النشاط يحتاج metadata صوتية منشورة من المعلم (passageId / sessionId / expectedText)."
+    : bits.join(" · ");
+}
+
+function renderActivityMode(ex) {
+  const voice = isVoiceExercise(ex);
+  $("activity-text-mode").classList.toggle("hidden", voice);
+  $("activity-voice-mode").classList.toggle("hidden", !voice);
+  $("activity-submit").textContent = voice ? "رفع وإرسال القراءة" : "إرسال المحاولة";
+  $("activity-submit").disabled = false;
+  if (voice) {
+    renderVoiceMeta(ex.metadata ?? {});
+    setVoiceStatus("اختر ملفًا صوتيًا ثم أرسل المحاولة. لا تُولَّد أي بيانات مصطنعة.");
+  } else {
+    setVoiceStatus("");
+  }
+}
+
+async function requestPresignedUploadUrl(audioKey) {
+  const r = await api("GET", `/api/audio/presign?key=${encodeURIComponent(audioKey)}&op=putObject`);
+  if (r.status !== 200 || !r.json?.url) {
+    throw new Error(r.json?.error ?? `PRESIGN_FAILED_${r.status}`);
+  }
+  return String(r.json.url);
+}
+
+async function uploadVoiceFile(audioKey, file) {
+  const signedUrl = await requestPresignedUploadUrl(audioKey);
+  const headers = file.type ? { "Content-Type": file.type } : undefined;
+  const res = await fetch(signedUrl, { method: "PUT", headers, body: file });
+  if (!res.ok) throw new Error(`UPLOAD_FAILED_${res.status}`);
+}
+
+async function prepareVoiceEngineInput(ex) {
+  const meta = ex.metadata ?? {};
+  const file = $("activity-audio-file").files?.[0] ?? null;
+  if (!file) throw new Error("AUDIO_FILE_REQUIRED");
+  const passageId = String(meta.passageId ?? "").trim();
+  const sessionId = String(meta.sessionId ?? "").trim();
+  const expectedText = voiceExpectedText(meta);
+  if (!passageId || !sessionId) throw new Error("VOICE_METADATA_MISSING");
+
+  const audioKey = [
+    "student-ui",
+    encodeURIComponent(state.tenantId ?? "tenant"),
+    encodeURIComponent(state.studentId ?? "student"),
+    encodeURIComponent(state.attemptId ?? uuid()),
+    `${Date.now()}-${slugFileName(file.name)}`,
+  ].join("/");
+
+  setVoiceStatus("جارٍ طلب رابط رفع آمن…", "notice");
+  await uploadVoiceFile(audioKey, file);
+  state.voiceUploadKey = audioKey;
+  setVoiceStatus(`تم رفع الملف بنجاح: ${file.name}`, "notice");
+
+  return { passageId, sessionId, audioKey, expectedText };
+}
+
+function renderVoicePrompt(meta) {
+  const expected = voiceExpectedText(meta);
+  return expected
+    ? `<div class="item title">نص القراءة: ${esc(expected)}</div>`
+    : `<div class="notice">لا يوجد نص قراءة منشور داخل metadata لهذا النشاط بعد — لن تُعرض بدائل وهمية.</div>`;
+}
+
+$("switch-student").addEventListener("click", () => showLoginMode("student"));
+$("switch-staff").addEventListener("click", () => showLoginMode("staff"));
+$("show-forgot-password").addEventListener("click", () => { hideAuthMessages(); show("view-forgot-password"); });
+$("header-logout").addEventListener("click", () => safeLogout());
+
+$("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  hideAuthMessages();
+  if (state.authMode === "student") {
+    state.tenantId = $("login-tenant").value.trim();
+    const identityId = $("login-identity").value.trim();
+    if (!state.tenantId || !identityId) return;
+    const r = await api("POST", "/v1/auth/student-login", { body: { identityId }, auth: false });
+    if (r.status !== 200 || !r.json?.accessToken) {
+      setAuthMessage("error", `فشل دخول الطالب (${r.status}): ${r.json?.error?.message ?? r.json?.error ?? "تحقق من المعرفات"}`);
+      return;
+    }
+    state.accessToken = r.json.accessToken;
+    state.refreshToken = r.json.refreshToken ?? null;
+    state.context = r.json.context ?? {};
+    state.studentId = state.context.studentId;
+    state.user = { role: "student", id: state.studentId };
+    persistSession();
+    syncHeader();
+    await renderDashboard();
+    return;
+  }
+
+  const email = $("login-email").value.trim();
+  const password = $("login-password").value;
+  if (!email || !password) return;
+  const r = await api("POST", "/v1/auth/login", { body: { email, password }, auth: false });
+  if (r.status !== 200 || !r.json?.accessToken) {
+    setAuthMessage("error", `فشل دخول الفريق (${r.status}): ${r.json?.error?.message ?? r.json?.error ?? "تحقق من البريد وكلمة المرور"}`);
+    return;
+  }
+  state.accessToken = r.json.accessToken;
+  state.refreshToken = r.json.refreshToken ?? null;
+  state.user = r.json.user ?? null;
+  state.context = null;
+  state.studentId = null;
+  persistSession();
+  syncHeader();
+  show("view-dashboard");
+  $("dash-meta").textContent = `جلسة فريق العمل · ${state.user?.email ?? ""}`;
+  $("dash-progress").innerHTML = `<div class="item">تم تسجيل الدخول بنجاح. لوحات الفريق التفصيلية ستُربط في المراحل التالية عبر واجهات المعلم/الإدارة الحقيقية.</div>`;
+});
+
+document.addEventListener("click", (e) => {
+  const nav = e.target?.dataset?.nav;
+  if (nav === "dashboard") renderDashboard();
+  if (nav === "lesson" && state.currentLesson) openLesson(state.currentLesson);
+  if (nav === "login") show("view-login");
+});
+
+$("forgot-password-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  hideAuthMessages();
+  const email = $("forgot-email").value.trim();
+  if (!email) return;
+  const r = await api("POST", "/v1/auth/forgot-password", { body: { email }, auth: false });
+  if (r.status !== 200) {
+    $("forgot-password-error").textContent = `تعذر إرسال طلب الاستعادة (${r.status})`;
+    $("forgot-password-error").classList.remove("hidden");
+    return;
+  }
+  const extra = r.json?.resetToken ? ` رمز التطوير: ${r.json.resetToken}` : "";
+  $("forgot-password-result").textContent = `تم إنشاء طلب الاستعادة بنجاح.${extra}`;
+  $("forgot-password-result").classList.remove("hidden");
+  $("reset-password-form").classList.remove("hidden");
+  if (r.json?.resetToken) $("reset-token").value = r.json.resetToken;
+});
+
+$("reset-password-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("forgot-password-error").classList.add("hidden");
+  const resetToken = $("reset-token").value.trim();
+  const newPassword = $("reset-password").value;
+  const r = await api("POST", "/v1/auth/reset-password", { body: { resetToken, newPassword }, auth: false });
+  if (r.status !== 200) {
+    $("forgot-password-error").textContent = `فشل تحديث كلمة المرور (${r.status}): ${r.json?.error?.message ?? r.json?.error ?? ""}`;
+    $("forgot-password-error").classList.remove("hidden");
+    return;
+  }
+  $("forgot-password-result").textContent = "تم تحديث كلمة المرور. يمكنك العودة إلى شاشة الدخول الآن.";
+  $("forgot-password-result").classList.remove("hidden");
+});
+
+$("activity-audio-file")?.addEventListener("change", () => {
+  const file = $("activity-audio-file").files?.[0] ?? null;
+  if (!file) {
+    state.voiceUploadKey = null;
+    setVoiceStatus("لم يتم اختيار ملف صوتي بعد.");
+    return;
+  }
+  state.voiceUploadKey = null;
+  const kb = Math.max(1, Math.round(file.size / 1024));
+  setVoiceStatus(`جاهز للرفع: ${file.name} (${kb} KB)`, "notice");
+});
+
+async function renderDashboard() {
+  if (state.authMode !== "student") {
+    show("view-dashboard");
+    return;
+  }
+  show("view-dashboard");
+  $("dash-meta").textContent = `سياق المستأجر: ${state.tenantId}`;
+  const d = await api("GET", `/v1/students/${state.studentId}/dashboard`);
+  if (d.status === 401 && await refreshIfPossible()) return renderDashboard();
+  if (d.status !== 200 || !d.json?.student) {
+    $("dash-progress").innerHTML = `<div class="error">تعذر تحميل لوحة الطالب (${d.status}): ${esc(d.json?.error?.message ?? d.json?.error ?? "")} — لا تُعرض بيانات وهمية.</div>`;
+    return;
+  }
+  const dash = d.json;
+  $("dash-progress").innerHTML = `
+    <div class="stat"><span class="muted small">أدلة مسجلة</span><b>${dash.progress?.evidenceCount ?? 0}</b></div>
+    <div class="stat"><span class="muted small">نقاط قوة</span><b>${dash.strengths?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">نقاط ضعف</span><b>${dash.weaknesses?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">فجوات</span><b>${dash.gaps?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">توصيات</span><b>${dash.recommendations?.length ?? 0}</b></div>`;
+  renderNext(dash.nextActivity);
+  renderRecommendations(dash.recommendations ?? []);
+  await renderLessons(dash);
+  renderSkills("dash-strengths", dash.strengths ?? []);
+  renderSkills("dash-weaknesses", dash.weaknesses ?? []);
+  $("dash-gaps").innerHTML = (dash.gaps?.length ?? 0) === 0
+    ? `<div class="muted small">لا فجوات مسجلة حاليًا (من نموذج المتعلم الحقيقي).</div>`
+    : dash.gaps.map((g) => `<div class="item">📐 <b>${esc(g.subject)}</b> / ${esc(g.skill)} <span class="badge insufficient">فجوة</span><div class="muted small">${esc(g.reason ?? "")}</div></div>`).join("");
+  $("dash-mastery").innerHTML = (dash.mastery?.length ?? 0) === 0
+    ? `<div class="muted small">لا سجلات إتقان بعد — تُكتب من المحركات الحقيقية عند إتمام تحليل القراءة.</div>`
+    : dash.mastery.map((m) => `<div class="item">🏅 <b>${esc(m.subject ?? m.skill ?? "")}</b> — مستوى <b>${esc(m.level)}</b> · درجة ${esc(m.score ?? "—")} · محاولات ${esc(m.attempts ?? "—")} <div class="muted small">${esc(m.trend ?? "")} · آخر تحديث ${esc(m.updatedAt ?? "")}</div></div>`).join("");
+  $("dash-recent").innerHTML = (dash.recentActivities?.length ?? 0) === 0
+    ? `<div class="muted small">لا محاولات سابقة.</div>`
+    : dash.recentActivities.map((a) => `<div class="item">📝 محاولة #${a.attemptNumber} — حالة <b>${esc(a.state)}</b> <span class="muted small">${esc(a.submittedAt ?? a.startedAt ?? "")}</span></div>`).join("");
+  renderModel(dash.skills ?? []);
+}
+
+function renderNext(next) {
+  $("dash-next").innerHTML = !next
+    ? `<div class="muted small">لا توصية تالية بعد — تحتاج أدلة كافية (تُشتق توصيتك من أدلتك الحقيقية عبر النظام).</div>`
+    : `<div class="item">🎯 <b>${esc(next.proposedActivityType)}</b> — من ${esc(next.currentSkill)} نحو ${esc(next.targetSkill)} <span class="badge">${esc(next.currentDimension)}</span>
+       <div class="muted small">السبب: ${esc(next.reason ?? "")}</div>
+       <div class="muted small">معيار إعادة التقييم: ${esc(next.reassessmentCriteria ?? "")} · ثقة ${esc(next.confidence ?? "")}${next.requiresTeacherApproval ? ' · <b>بحاجة موافقة معلم</b>' : ""}</div></div>`;
+}
+
+function renderRecommendations(recs) {
+  $("dash-recommendations").innerHTML = recs.length === 0
+    ? `<div class="muted small">لا توصيات بعد.</div>`
+    : recs.map((r) => `<div class="item">🔁 <b>${esc(r.proposedActivityType)}</b> · ${esc(r.currentSkill)} → ${esc(r.targetSkill)} <span class="muted small">(${esc(r.source ?? "")}${r.requiresTeacherApproval ? " · بحاجة موافقة معلم" : ""})</span></div>`).join("");
+}
+
+function renderSkills(elId, skills) {
+  $(elId).innerHTML = skills.length === 0
+    ? `<div class="muted small">لا شيء بعد.</div>`
+    : skills.map((s) => `<div class="item">${esc(s.subject)} / <b>${esc(s.skill)}</b> <span class="badge ${esc(s.level)}">${esc(s.level)}</span> <span class="muted small">${esc(s.trend ?? "")}</span></div>`).join("");
+}
+
+function renderModel(skills) {
+  $("dash-model").innerHTML = skills.length === 0
+    ? `<div class="muted small">نموذج المتعلم فارغ — يُبنى لحظيًا من أدلتك الحقيقية.</div>`
+    : `<table><thead><tr><th>المادة</th><th>المهارة</th><th>البعد</th><th>المستوى</th><th>الاتجاه</th><th>الثقة</th><th>عدد الأدلة</th></tr></thead><tbody>` +
+      skills.map((s) => `<tr><td>${esc(s.subject)}</td><td>${esc(s.skill)}</td><td>${esc(s.dimension)}</td><td><span class="badge ${esc(s.level)}">${esc(s.level)}</span></td><td>${esc(s.trend ?? "")}</td><td>${esc(s.confidence ?? "")}</td><td>${esc(s.sampleCount ?? "")}</td></tr>`).join("") +
+      `</tbody></table>`;
+}
+
+async function renderLessons() {
+  const l = await api("GET", "/v1/lessons");
+  if (l.status !== 200 || !Array.isArray(l.json?.items)) {
+    $("dash-lessons").innerHTML = `<div class="notice">تعذر تحميل الدروس (${l.status}) — ميزة الدروس غير متاحة الآن، ولا تُعرض بدائل وهمية.</div>`;
+    return;
+  }
+  $("dash-lessons").innerHTML = l.json.items.length === 0
+    ? `<div class="muted small">لا دروس منشورة في مستأجرك بعد.</div>`
+    : l.json.items.map((c) => `<div class="item"><span class="title">${esc(c.title)}</span> <span class="muted small">${esc(c.curriculum?.subject ?? "")} · صف ${esc(c.curriculum?.gradeLevel ?? "")}</span>
+        <button class="primary" data-open-lesson="${esc(c.id)}">فتح الدرس</button></div>`).join("");
+  document.querySelectorAll("[data-open-lesson]").forEach((b) =>
+    b.addEventListener("click", () => openLesson(b.dataset.openLesson)));
+}
+
+async function openLesson(lessonId) {
+  const l = await api("GET", `/v1/lessons/${lessonId}`);
+  if (l.status !== 200 || !l.json?.lesson) {
+    alert(`تعذر فتح الدرس (${l.status})`);
+    return;
+  }
+  state.currentLesson = lessonId;
+  $("lesson-title").textContent = l.json.lesson.title;
+  $("lesson-meta").textContent = `${l.json.lesson.curriculum?.subject ?? ""} · ${l.json.lesson.language ?? ""} · إصدار ${l.json.lesson.version}`;
+  const exs = l.json.exercises ?? [];
+  $("lesson-exercises").innerHTML = exs.length === 0
+    ? `<div class="muted small">لا أنشطة منشورة مرتبطة بهذا الدرس بعد.</div>`
+    : exs.map((x) => {
+        const meta = x.metadata ?? null;
+        const q = meta?.question ?? meta?.expression ?? meta?.expectedText ?? meta?.passageText ?? null;
+        const voice = x.expectedResponse?.type === "VOICE";
+        return `<div class="item" data-exercise='${esc(JSON.stringify({ id: x.exerciseId, engine: x.engineBinding, type: x.expectedResponse?.type, metadata: meta }))}'>
+          <span class="title">${voice ? "🎤 نشاط قراءة (صوتي)" : "✏️ نشاط " + esc(x.engineBinding)}</span>
+          <span class="badge">${esc(x.expectedResponse?.type ?? "")}</span>
+          ${q !== null ? `<div class="title" style="margin-top:.4rem">${voice ? "نص القراءة" : "السؤال"}: ${esc(q)}</div>` : `<div class="notice">لا يوجد نص منشور لهذا النشاط بعد — لن تُعرض بيانات مصطنعة.</div>`}
+          ${voice ? `<div class="notice">هذه المرحلة تفعّل اختيار ملف صوتي من المتصفح، طلب presign، الرفع، ثم إرسال المحاولة إلى المسار الحقيقي غير المتزامن.</div>` : ""}
+          <button class="primary" data-start-attempt="${esc(x.exerciseId)}">${voice ? "بدء النشاط الصوتي" : "بدء النشاط"}</button>
+        </div>`;
+      }).join("");
+  document.querySelectorAll("[data-start-attempt]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const box = b.closest("[data-exercise]");
+      startAttempt(JSON.parse(box.dataset.exercise));
+    }));
+  show("view-lesson");
+}
+
+async function startAttempt(ex) {
+  state.currentExercise = ex;
+  state.submitted = false;
+  clearVoiceUploadUi();
+  $("activity-title").textContent = `نشاط ${ex.engine}`;
+  $("activity-meta").textContent = `تمرين ${ex.id}`;
+  const meta = ex.metadata ?? {};
+  const q = meta.question ?? meta.expression ?? voiceExpectedText(meta) ?? null;
+  $("activity-body").innerHTML = isVoiceExercise(ex)
+    ? renderVoicePrompt(meta)
+    : (q !== null
+      ? `<div class="item title">السؤال: ${esc(q)}</div>`
+      : `<div class="notice">لا نص سؤال مُحاور في هذا التمرين — أدخل إجابتك وفق تعليمات معلمك.</div>`);
+  $("activity-answer").value = "";
+  $("activity-error").classList.add("hidden");
+  $("activity-notice").classList.add("hidden");
+  $("result-card").classList.add("hidden");
+  $("activity-form").classList.remove("hidden");
+  renderActivityMode(ex);
+  show("view-activity");
+
+  const r = await api("POST", "/v1/attempts", {
+    idempotencyKey: uuid(),
+    body: { activityId: ex.id, exerciseId: ex.id, attemptNumber: 1 },
+  });
+  if (r.status !== 201 && r.status !== 200) {
+    $("activity-error").textContent = `تعذر بدء المحاولة (${r.status}): ${esc(r.json?.error ?? "")}`;
+    $("activity-error").classList.remove("hidden");
+    return;
+  }
+  state.attemptId = r.json.attempt.id;
+  state.attemptStartedAt = Date.now();
+  $("activity-notice").textContent = isVoiceExercise(ex)
+    ? `المحاولة بدأت (${r.json.attempt.state}). اختر ملفك الصوتي ثم أرسل.`
+    : `المحاولة بدأت (${r.json.attempt.state}). أجب ثم أرسل.`;
+  $("activity-notice").classList.remove("hidden");
+}
+
+$("activity-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  submitAttempt();
+});
+
+async function submitAttempt() {
+  if (!state.attemptId || state.submitted) return;
+  const ex = state.currentExercise;
+  const errEl = $("activity-error");
+  errEl.classList.add("hidden");
+
+  let engineInput;
+  const meta = ex.metadata ?? {};
+  if (isVoiceExercise(ex)) {
+    try {
+      engineInput = await prepareVoiceEngineInput(ex);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err ?? "UPLOAD_FAILED");
+      if (msg === "AUDIO_FILE_REQUIRED") errEl.textContent = "اختر ملفًا صوتيًا أولًا.";
+      else if (msg === "VOICE_METADATA_MISSING") errEl.textContent = "هذا النشاط الصوتي ينقصه passageId أو sessionId في metadata المنشورة.";
+      else errEl.textContent = `تعذر تجهيز الرفع الصوتي: ${msg}`;
+      errEl.classList.remove("hidden");
+      return;
+    }
+  } else {
+    const answer = $("activity-answer").value.trim();
+    if (!answer) {
+      errEl.textContent = "أدخل إجابتك أولًا.";
+      errEl.classList.remove("hidden");
+      return;
+    }
+    engineInput = ex.engine === "NUMERACY"
+      ? { task: { expression: String(meta.expression ?? meta.question ?? ""), domain: String(meta.domain ?? "arithmetic"), expectedAnswer: String(meta.expectedAnswer ?? ""), digitSet: String(meta.digitSet ?? "arabic") }, response: { finalAnswer: answer } }
+      : { finalAnswer: answer };
+  }
+
+  state.submitted = true;
+  $("activity-submit").disabled = true;
+  const dur = Date.now() - (state.attemptStartedAt ?? Date.now());
+  const r = await api("POST", `/v1/attempts/${state.attemptId}/submit`, {
+    body: { durationMs: dur, engineInput },
+  });
+  if (r.status !== 200) {
+    state.submitted = false;
+    $("activity-submit").disabled = false;
+    errEl.textContent = `تعذر إرسال المحاولة (${r.status}): ${esc(r.json?.error ?? "")}`;
+    errEl.classList.remove("hidden");
+    return;
+  }
+  $("activity-form").classList.add("hidden");
+  $("activity-notice").classList.add("hidden");
+  renderResult(r.json);
+}
+
+function renderResult(attempt) {
+  $("result-card").classList.remove("hidden");
+  const voiceMsg = isVoiceExercise(state.currentExercise)
+    ? `<div class="notice">تم ربط ملف القراءة بالمحاولة وإرسالها إلى المسار غير المتزامن. حالة التحليل الحقيقية ستظهر لاحقًا في اللوحة عند اكتمال العامل.</div>`
+    : "";
+  $("activity-result").innerHTML = `
+    <div class="item">حالة المحاولة: <b>${esc(attempt.state)}</b>${attempt.evidenceRef ? ` · <span class="muted small">دليل مسجل: ${esc(attempt.evidenceRef)}</span>` : ""}</div>
+    ${voiceMsg}
+    ${attempt.state === "EVIDENCE_RECORDED"
+      ? `<div class="item">تم تقييم محاولتك وتسجيل الدليل في النظام. تفاصيل التقييم تُعرض في لوحتك عبر نموذج المتعلم الحقيقي.</div>`
+      : attempt.state === "SUBMITTED"
+        ? `<div class="notice">أُرسلت المحاولة إلى مسار التحليل الحقيقي. النتيجة ستُسجل عبر العامل ثم تظهر في لوحتك.</div>`
+        : `<div class="notice">حالة المحاولة: ${esc(attempt.state)} — انتظر التحديث أو أعد التحميل.</div>`}`;
+  $("result-actions").innerHTML = `
+    <button class="primary" id="go-dash">عرض لوحتي</button>
+    <button class="primary" id="retry-activity" style="background:#5a7fb5">إعادة النشاط</button>`;
+  $("go-dash").addEventListener("click", () => renderDashboard());
+  $("retry-activity").addEventListener("click", () => {
+    state.attemptId = null;
+    state.submitted = false;
+    $("result-card").classList.add("hidden");
+    startAttempt(state.currentExercise);
+  });
+}
+
+(async function bootstrap() {
+  showLoginMode("student");
+  const hasSession = loadSession();
+  if (!hasSession) {
+    show("view-login");
+    return;
+  }
+  if (state.authMode !== "student" && !(await refreshIfPossible())) {
+    await safeLogout();
+    return;
+  }
+  syncHeader();
+  if (state.authMode === "student" && state.studentId) {
+    await renderDashboard();
+    return;
+  }
+  show("view-dashboard");
+  $("dash-meta").textContent = `جلسة فريق العمل · ${state.user?.email ?? ""}`;
+  $("dash-progress").innerHTML = `<div class="item">تمت استعادة الجلسة بنجاح.</div>`;
+})();

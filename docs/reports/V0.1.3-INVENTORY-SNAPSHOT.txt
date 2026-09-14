@@ -1,0 +1,38 @@
+=== GIT ROOT ===
+/home/user/audit/v2.7.1
+=== HEAD ===
+b478adf88333d970e77d83e19f824a01b4787eba
+=== BRANCH ===
+p2-real-inference
+=== TAGS AT HEAD ===
+=== ALL RELEVANT TAGS ===
+buytuk-v01.2
+core32-p1-student-ui
+core33-p2-real-llm-path
+=== GIT STATUS --PORCELAIN ===
+?? docs/reports/V0.1.3-INVENTORY-SNAPSHOT.txt
+=== GIT STATUS -SB ===
+## p2-real-inference
+?? docs/reports/V0.1.3-INVENTORY-SNAPSHOT.txt
+=== LOG buytuk-v01.2..HEAD --stat ===
+b478adf (HEAD -> p2-real-inference) docs: P2-MID-GATE — first real LLM path complete (GatewayLLMAdapter → Feedback RPC), mockLLMCall = absolute zero, core-33 8/8, regression 102/102 — awaiting owner approval before audio-Gateway phase
+ docs/reports/P2-MID-GATE.md | 47 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+d1c23cf (tag: core33-p2-real-llm-path) P2-8 (ACR-E6-001): core-33 real-LLM-path proofs 8/8 — REAL in-process gRPC server from the production inference.proto: integration (callLLM→GatewayLLMAdapter→Feedback RPC→parsed result + x-tenant-id metadata verified), behavioral (two different real phoneme errors → different outputs from real catalog via RuleEngine — static template impossible), enforced timeout (real DEADLINE_EXCEEDED→TIMEOUT), bounded retry (2×UNAVAILABLE→success on 3rd; AUTH_REJECTED fails fast), degraded fallback (provider failure + unparseable text → degraded:true, never a fake success) + ACR-E6-001 decision record
+ docs/decisions/ACR-E6-001-P2-REAL-LLM-PATH.md |  45 ++++++
+ tests/core-33/p2-llm-path.test.ts             | 203 ++++++++++++++++++++++++++
+ tests/core-33/vitest.config.ts                |  38 +++++
+ 3 files changed, 286 insertions(+)
+fae2caa P2-4/P2-5 (ACR-E6-001): remove mockLLMCall from production — callLLM consumes injected LLMProvider (GatewayLLMAdapter); failure = explicit degraded:true feedback (error-safe, original instructions kept, never a fake success) + additive AIFeedback.degraded? contract field + engine vitest env pins canonical INFERENCE_PROTO_PATH
+ engines/reading-engine/src/engines/ai-feedback.ts | 70 +++++++++++++++++------
+ engines/reading-engine/vitest.config.ts           |  2 +-
+ packages/contracts/src/reading/types.ts           |  2 +
+ 3 files changed, 56 insertions(+), 18 deletions(-)
+e9c0a04 P2-1/P2-2 (ACR-E6-001): LLMProvider contract + GatewayLLMAdapter (first real provider — reuses existing gRPC client + Feedback RPC) + additive client options (enforced gRPC deadline + x-tenant-id metadata; legacy callers untouched) + DI binding (additive)
+ engines/reading-engine/src/container.ts            |  8 +++
+ engines/reading-engine/src/engines/llm/config.ts   | 23 +++++++
+ .../src/engines/llm/gateway-adapter.ts             | 74 ++++++++++++++++++++++
+ engines/reading-engine/src/engines/llm/index.ts    |  8 +++
+ engines/reading-engine/src/engines/llm/types.ts    | 54 ++++++++++++++++
+ .../src/pipeline/inference-client.ts               | 15 ++++-
+ 6 files changed, 180 insertions(+), 2 deletions(-)

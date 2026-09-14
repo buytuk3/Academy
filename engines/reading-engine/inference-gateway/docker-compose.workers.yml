@@ -1,0 +1,79 @@
+version: "3.9"
+
+x-gpu-common: &gpu-common
+  runtime: nvidia
+  environment:
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    - HF_HOME=/model-cache
+  volumes:
+    - model-cache:/model-cache
+  restart: unless-stopped
+  networks:
+    - inference-net
+  healthcheck:
+    interval: 30s
+    timeout: 10s
+    start_period: 120s
+    retries: 3
+
+services:
+  gateway:
+    <<: *gpu-common
+    build:
+      context: .
+      target: runtime
+    image: buytuk/inference-gateway:4.0
+    container_name: buytuk-inference-gateway
+    ports:
+      - "50050:50050"
+    environment:
+      - GATEWAY_PORT=50050
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - INFERENCE_API_KEY=${INFERENCE_API_KEY}
+      - WHISPER_MODEL=${WHISPER_MODEL:-large-v3-turbo}
+      - ALIGN_MODEL=${ALIGN_MODEL:-jonatasgrosman/wav2vec2-large-xlsr-53-arabic}
+      - MMS_MODEL=${MMS_MODEL:-facebook/mms-1b-all}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Optional: separate Whisper replica for high load
+  whisper-replica:
+    <<: *gpu-common
+    build:
+      context: .
+      target: runtime
+    image: buytuk/inference-gateway:4.0
+    container_name: buytuk-whisper-replica
+    ports:
+      - "50051:50050"
+    environment:
+      - GATEWAY_PORT=50050
+      - WHISPER_MODEL=${WHISPER_MODEL:-large-v3-turbo}
+      - INFERENCE_API_KEY=${INFERENCE_API_KEY}
+    profiles:
+      - scale
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  model-cache:
+    name: buytuk-model-cache
+
+networks:
+  inference-net:
+    name: buytuk-inference-net
+    driver: bridge

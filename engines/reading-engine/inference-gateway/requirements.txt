@@ -1,0 +1,39 @@
+grpcio==1.64.0
+grpcio-tools==1.64.0
+protobuf==4.25.3
+
+# Whisper
+faster-whisper==1.0.1
+ctranslate2==4.3.1
+
+# WhisperX
+whisperx==3.1.1
+torch==2.3.0
+torchaudio==2.3.0
+
+# MMS Phoneme Alignment
+transformers==4.41.2
+datasets==2.19.1
+sentencepiece==0.2.0
+accelerate==0.30.1
+
+# CAMeL Tools
+camel-tools==1.6.2
+cachetools==5.3.3
+
+# LLM
+google-generativeai==0.7.2
+openai==1.30.1
+
+# Observability
+prometheus-client==0.20.0
+structlog==24.2.0
+
+# Utilities
+numpy==1.26.4
+scipy==1.13.1
+soundfile==0.12.1
+librosa==0.10.2
+
+# Runtime
+uvicorn==0.29.0

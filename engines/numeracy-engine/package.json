@@ -1,0 +1,11 @@
+{
+  "name": "buytuk-numeracy-engine",
+  "version": "1.0.0",
+  "description": "BuyTuk Academy Numeracy Engine Foundation (CORE-15) - deterministic step-aware measurement, error-pattern extraction, digit/language policies, evidence emission via canonical Evidence Writer. No ML/LLM, no autonomous decisions, no own storage.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

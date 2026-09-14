@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@workspace/config": [
+        "../config/src/index.ts"
+      ],
+      "@workspace/observability": [
+        "../observability/src/index.ts"
+      ],
+      "@buytuk/contracts": [
+        "../contracts/src/index.ts"
+      ]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*"
+  ]
+}

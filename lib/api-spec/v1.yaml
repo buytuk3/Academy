@@ -1,0 +1,1185 @@
+openapi: 3.0.3
+info:
+  title: BuyTuk Academy Platform API — Canonical /v1
+  version: 1.0.0
+  description: >
+    CORE-24 / Wave 3 — canonical product API. SOURCE OF TRUTH: this contract
+    drives Zod runtime validation (lib/api-zod/src/v1) and the generated
+    client (lib/api-client-react/src/generated/v1). Controllers are thin:
+    validate → authorize → capability → respond. Business logic stays in the
+    owning packages (CORE-18..24); Evidence is written ONLY by the canonical
+    Evidence Writer (no client-writeable evidence endpoint exists here);
+    the Teacher Decision Gate is never bypassed (intelligence is read-only).
+    Idempotency: mutating operations take an Idempotency-Key header which the
+    service maps to the capability operationKey ((tenant_id, operation_key)
+    dedup — retries converge on the same row). Legacy /api stays mounted as
+    transitional; /v1 is the only canonical surface.
+servers:
+  - url: /v1
+tags:
+  - name: auth
+  - name: content
+  - name: exercises
+  - name: assignments
+  - name: attempts
+  - name: evidence
+  - name: intelligence
+  - name: oversight
+security:
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Email/password login (staff and student accounts)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token pair + user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPairResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refresh
+      summary: Rotate refresh token (family reuse detection)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Rotated token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPairResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Revoke a refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Revoked
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: me
+      summary: Current user + verified platform context (Identity → Membership → Class → School → Organization → Tenant)
+      responses:
+        '200':
+          description: User + context (studentContext present for students)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /auth/student-login:
+    post:
+      tags: [auth]
+      operationId: studentLogin
+      summary: Unified student login context — Identity → X-Tenant-Id (context selector, NOT an entitlement) → validateStudentLoginContext verifies Student → Membership → Class → School → Organization → Tenant against real records (20-O); claimed context is NEVER trusted; no tenant is ever auto-selected (multi-membership safe)
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentLoginRequest'
+      responses:
+        '200':
+          description: Verified context + token pair carrying the studentId claim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /content:
+    get:
+      tags: [content]
+      operationId: searchContent
+      summary: Search the tenant's content library (tenant-scoped, paginated, filtered)
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - { name: kind, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [DRAFT, PUBLISHED, SUPERSEDED] } }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: stageKey, in: query, schema: { type: string } }
+        - { name: gradeLevel, in: query, schema: { type: string } }
+        - { name: curriculumId, in: query, schema: { type: string } }
+        - { name: curriculumVersion, in: query, schema: { type: string } }
+        - { name: lessonId, in: query, schema: { type: string } }
+        - { name: titlePrefix, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paginated library page (tenant-scoped)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags: [content]
+      operationId: createContent
+      summary: Create a content definition (idempotent via Idempotency-Key)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentCreateRequest'
+      responses:
+        '201':
+          description: Created (200 + created=false on idempotent retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentMutationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /content/{contentId}:
+    get:
+      tags: [content]
+      operationId: getContent
+      summary: Get one content definition (same tenant only)
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Content definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /content/{contentId}/publish:
+    post:
+      tags: [content]
+      operationId: publishContent
+      summary: Publish a DRAFT content definition (CAS; idempotent re-publish)
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Published definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /content/{contentId}/versions:
+    get:
+      tags: [content]
+      operationId: listContentVersions
+      summary: Full version lineage (history is immutable and queryable)
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Ordered versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentVersionsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /content/{contentId}/supersede:
+    post:
+      tags: [content]
+      operationId: supersedeContent
+      summary: Supersede a PUBLISHED definition with a new DRAFT version (transactional; history preserved)
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentSupersedeRequest'
+      responses:
+        '200':
+          description: New DRAFT successor version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /exercises:
+    get:
+      tags: [exercises]
+      operationId: searchExercises
+      summary: Search the tenant's exercise library
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - { name: engineBinding, in: query, schema: { type: string, enum: [READING, DICTATION, NUMERACY, ASSESSMENT] } }
+        - { name: activityType, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [DRAFT, PUBLISHED, SUPERSEDED] } }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: curriculumVersion, in: query, schema: { type: string } }
+        - { name: contentId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Paginated exercise page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags: [exercises]
+      operationId: createExercise
+      summary: Create an exercise definition (ONE engine binding; idempotent via Idempotency-Key)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExerciseCreateRequest'
+      responses:
+        '201':
+          description: Created (200 + created=false on retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseMutationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /exercises/{exerciseId}:
+    get:
+      tags: [exercises]
+      operationId: getPublishedExercise
+      summary: Published exercise as the canonical CORE-22 contract (version-pinned)
+      parameters:
+        - $ref: '#/components/parameters/ExerciseId'
+      responses:
+        '200':
+          description: Exercise contract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /exercises/{exerciseId}/publish:
+    post:
+      tags: [exercises]
+      operationId: publishExercise
+      summary: Publish a DRAFT exercise (CAS; idempotent)
+      parameters:
+        - $ref: '#/components/parameters/ExerciseId'
+      responses:
+        '200':
+          description: Published exercise
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /assignments:
+    get:
+      tags: [assignments]
+      operationId: listAssignments
+      summary: List assignments (scope-enforced — teachers must narrow to their class/student)
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - { name: studentId, in: query, schema: { type: string, format: uuid } }
+        - { name: classId, in: query, schema: { type: string, format: uuid } }
+        - { name: schoolId, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [ACTIVE, CANCELLED, CLOSED] } }
+      responses:
+        '200':
+          description: Paginated assignments (scope-filtered)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentListResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      tags: [assignments]
+      operationId: createAssignment
+      summary: Assign an activity (RBAC + Scope per CORE-19/21; idempotent via Idempotency-Key)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentCreateRequest'
+      responses:
+        '201':
+          description: Created (200 + created=false on retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentMutationResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /assignments/{assignmentId}:
+    get:
+      tags: [assignments]
+      operationId: getAssignment
+      summary: Get one assignment (same tenant; scope-checked)
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          description: Assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /assignments/{assignmentId}/cancel:
+    post:
+      tags: [assignments]
+      operationId: cancelAssignment
+      summary: Cancel an ACTIVE assignment (one-way; idempotent retry)
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          description: Cancelled assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentResponse'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /assignments/{assignmentId}/close:
+    post:
+      tags: [assignments]
+      operationId: closeAssignment
+      summary: Close an ACTIVE assignment (one-way; idempotent retry)
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          description: Closed assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentResponse'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /attempts:
+    post:
+      tags: [attempts]
+      operationId: createAttempt
+      summary: Create/start an attempt (student self or in-scope staff; retry-safe by logical identity)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttemptCreateRequest'
+      responses:
+        '201':
+          description: Created (200 + created=false on retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptMutationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /attempts/{attemptId}:
+    get:
+      tags: [attempts]
+      operationId: getAttempt
+      summary: Attempt state (owner student or in-scope staff)
+      parameters:
+        - $ref: '#/components/parameters/AttemptId'
+      responses:
+        '200':
+          description: Attempt state row (timings/state only — no measurements)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /attempts/{attemptId}/submit:
+    post:
+      tags: [attempts]
+      operationId: submitAttempt
+      summary: Submit (IN_PROGRESS → SUBMITTED; operational time segments; CAS + idempotent replay)
+      parameters:
+        - $ref: '#/components/parameters/AttemptId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttemptSubmitRequest'
+      responses:
+        '200':
+          description: Attempt after transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptResponse'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /attempts/{attemptId}/record:
+    post:
+      tags: [attempts]
+      operationId: recordAttempt
+      summary: Complete the lifecycle with a POINTER to an already-recorded canonical Evidence row (MEASURED → EVIDENCE_RECORDED). The API never writes Evidence.
+      parameters:
+        - $ref: '#/components/parameters/AttemptId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttemptRecordRequest'
+      responses:
+        '200':
+          description: Attempt after transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /students/{studentId}/attempts:
+    get:
+      tags: [attempts]
+      operationId: listStudentAttempts
+      summary: A student's attempts (self, or staff within scope)
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptListResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /students/{studentId}/evidence:
+    get:
+      tags: [evidence]
+      operationId: listStudentEvidence
+      summary: Canonical evidence READS only (student self or school-scoped staff per 20-B). No evidence WRITE endpoint exists — the Evidence Writer stays the sole owner.
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - { name: evidenceType, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paginated canonical evidence (read-only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceListResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /students/{studentId}/insights:
+    get:
+      tags: [intelligence]
+      operationId: getStudentInsights
+      summary: Read-only intelligence (insights over Evidence + Learner Model). Teacher Decision Gate untouched — recommendations here are NEVER auto-executed (PENDING → teacher APPROVED/MODIFIED/REJECTED stays with packages/decisions).
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      responses:
+        '200':
+          description: Explainable insights (evidenceRefs + confidence + explanation)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightsResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /oversight/aggregates:
+    get:
+      tags: [oversight]
+      operationId: getOversightAggregates
+      summary: Privacy-suppressed aggregates per CORE-20 (individual detail DENIED above school scope; minimum aggregation size enforced)
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - { name: schoolId, in: query, schema: { type: string, format: uuid } }
+        - { name: organizationId, in: query, schema: { type: string, format: uuid } }
+        - { name: classId, in: query, schema: { type: string, format: uuid } }
+        - { name: stageKey, in: query, schema: { type: string } }
+        - { name: gradeLevel, in: query, schema: { type: string } }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: evidenceType, in: query, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: minimumAggregationSize, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Aggregate groups (INSUFFICIENT_EVIDENCE suppression applies)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AggregateResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+    IdempotencyKeyOptional:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 200
+    TenantIdHeader:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Context SELECTOR only — never an entitlement. Presence does NOT authorize the caller for this tenant; the server verifies actual Identity → Membership → School → Class → Tenant records in the database. No membership for the requested tenant → 403; the server NEVER auto-selects a tenant for the student (multi-membership safe).
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    ContentId:
+      name: contentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ExerciseId:
+      name: exerciseId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AttemptId:
+      name: attemptId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    StudentId:
+      name: studentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    ValidationError:
+      description: Validation failed (Zod contract)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnauthorizedError:
+      description: Missing/invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ForbiddenError:
+      description: Authenticated but outside scope/role/tenant (RBAC + Scope + isolation)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFoundError:
+      description: Not found within the tenant scope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ConflictError:
+      description: State/lifecycle conflict or lost CAS race (retry-safe)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: VALIDATION_ERROR | UNAUTHORIZED | FORBIDDEN | NOT_FOUND | CONFLICT | STATE_CONFLICT | RATE_LIMITED | INTERNAL_ERROR
+            message:
+              type: string
+              description: Reason code only — never PII, SQL, or internals
+            requestId: { type: string }
+            correlationId: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1 }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string, minLength: 1 }
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken: { type: string }
+    StudentLoginRequest:
+      type: object
+      required: [identityId]
+      properties:
+        identityId:
+          type: string
+          format: uuid
+          description: Platform-minted identity (20-P — never a name)
+        claimed:
+          type: object
+          description: NEVER trusted — verified against real records (20-O)
+          properties:
+            schoolId: { type: string, format: uuid }
+            classId: { type: string, format: uuid }
+            stageKey: { type: string }
+            gradeLevel: { type: string }
+    TokenPairResponse:
+      type: object
+      required: [user, accessToken, refreshToken]
+      properties:
+        user:
+          type: object
+          required: [id, tenantId, role]
+          properties:
+            id: { type: string }
+            tenantId: { type: string }
+            role: { type: string }
+            email: { type: string }
+            firstName: { type: string }
+            lastName: { type: string }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+    StudentContext:
+      type: object
+      required: [studentId, classId, schoolId, gradeLevel]
+      properties:
+        studentId: { type: string, format: uuid }
+        classId: { type: string, format: uuid }
+        schoolId: { type: string, format: uuid }
+        organizationId: { type: string, nullable: true }
+        stageKey: { type: string, nullable: true }
+        gradeLevel: { type: string }
+    MeResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          type: object
+          required: [id, tenantId, role]
+          properties:
+            id: { type: string }
+            tenantId: { type: string }
+            role: { type: string }
+            email: { type: string }
+            firstName: { type: string }
+            lastName: { type: string }
+        studentContext:
+          $ref: '#/components/schemas/StudentContext'
+    StudentLoginResponse:
+      type: object
+      required: [context, accessToken, refreshToken]
+      properties:
+        context:
+          $ref: '#/components/schemas/StudentContext'
+        accessToken: { type: string }
+        refreshToken: { type: string }
+    PaginationMeta:
+      type: object
+      required: [total, limit, offset]
+      properties:
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 200 }
+        offset: { type: integer, minimum: 0 }
+    CurriculumAnchor:
+      type: object
+      required: [curriculumId, curriculumVersion, stageKey, gradeLevel, subject]
+      description: MANDATORY immutable curriculum version (21-O) — never free text
+      properties:
+        curriculumId: { type: string }
+        curriculumVersion: { type: string }
+        country: { type: string }
+        educationSystem: { type: string }
+        stageKey: { type: string }
+        gradeKey: { type: string }
+        gradeLevel: { type: string }
+        subject: { type: string }
+        bookId: { type: string }
+        unitId: { type: string }
+        lessonId: { type: string }
+        objectiveId: { type: string }
+        skill: { type: string }
+        dimension: { type: string }
+    ContentCreateRequest:
+      type: object
+      required: [title, kind, source, curriculum]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 300 }
+        kind: { type: string, minLength: 1 }
+        source: { type: string, enum: [TEACHER_CREATED, CURRICULUM, SYSTEM, REASSESSMENT, REINFORCEMENT] }
+        bodyRef:
+          type: string
+          maxLength: 500
+          description: Object Storage REFERENCE only — media never inline (ADR-004)
+        language: { type: string, default: ar }
+        curriculum:
+          $ref: '#/components/schemas/CurriculumAnchor'
+        metadata: { type: object, additionalProperties: true }
+    ContentResponse:
+      type: object
+      required: [id, tenantId, title, kind, source, status, version, curriculum]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        rootContentId: { type: string, format: uuid }
+        parentVersionId: { type: string, nullable: true }
+        version: { type: integer, minimum: 1 }
+        status: { type: string, enum: [DRAFT, PUBLISHED, SUPERSEDED] }
+        title: { type: string }
+        kind: { type: string }
+        source: { type: string }
+        bodyRef: { type: string, nullable: true }
+        language: { type: string }
+        curriculum:
+          $ref: '#/components/schemas/CurriculumAnchor'
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        metadata: { type: object, additionalProperties: true, nullable: true }
+    ContentMutationResponse:
+      type: object
+      required: [content, created]
+      properties:
+        content:
+          $ref: '#/components/schemas/ContentResponse'
+        created: { type: boolean }
+    ContentListResponse:
+      type: object
+      required: [total, limit, offset, items]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentResponse'
+    ContentVersionsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentResponse'
+    ContentSupersedeRequest:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 300 }
+        bodyRef: { type: string, maxLength: 500 }
+        kind: { type: string }
+        metadata: { type: object, additionalProperties: true }
+    ExerciseCreateRequest:
+      type: object
+      required: [activityType, engineBinding, expectedResponseType, source, curriculum]
+      properties:
+        activityType: { type: string, minLength: 1 }
+        engineBinding: { type: string, enum: [READING, DICTATION, NUMERACY, ASSESSMENT], description: ONE measuring engine }
+        expectedResponseType: { type: string, enum: [TYPED, VOICE, HANDWRITTEN, SELECTION, STEPS] }
+        expectedResponseConfig: { type: object, additionalProperties: true }
+        contentId: { type: string, format: uuid, description: same-tenant library link (Exercise ≠ Content) }
+        assessmentRef: { type: string, description: REFERENCE to the assessment-engine definition (21-E) — never embedded }
+        maxAttempts: { type: integer, minimum: 1 }
+        timeLimitMs: { type: integer, minimum: 1 }
+        source: { type: string, enum: [TEACHER_CREATED, CURRICULUM, SYSTEM, REASSESSMENT, REINFORCEMENT] }
+        curriculum:
+          $ref: '#/components/schemas/CurriculumAnchor'
+        metadata: { type: object, additionalProperties: true }
+    ExerciseResponse:
+      type: object
+      required: [exerciseId, tenantId, engineBinding, expectedResponse, curriculum, status, version]
+      properties:
+        exerciseId: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        engineBinding: { type: string, enum: [READING, DICTATION, NUMERACY, ASSESSMENT] }
+        contentRefs:
+          type: array
+          items: { type: string }
+        expectedResponse:
+          type: object
+          required: [type]
+          properties:
+            type: { type: string, enum: [TYPED, VOICE, HANDWRITTEN, SELECTION, STEPS] }
+            maxAttempts: { type: integer }
+            timeLimitMs: { type: integer }
+        curriculum:
+          $ref: '#/components/schemas/CurriculumAnchor'
+        assessmentPolicyRef: { type: string }
+        status: { type: string, enum: [DRAFT, PUBLISHED, SUPERSEDED] }
+        version: { type: integer }
+        metadata: { type: object, additionalProperties: true, nullable: true }
+    ExerciseMutationResponse:
+      type: object
+      required: [exercise, created]
+      properties:
+        exercise:
+          $ref: '#/components/schemas/ExerciseResponse'
+        created: { type: boolean }
+    ExerciseListResponse:
+      type: object
+      required: [total, limit, offset, items]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseResponse'
+    AssignmentCreateRequest:
+      type: object
+      required: [activityId, activityVersion, curriculum, targetSchoolId, source]
+      properties:
+        activityId: { type: string, minLength: 1 }
+        activityVersion: { type: integer, minimum: 1 }
+        exerciseId: { type: string, format: uuid }
+        exerciseVersion: { type: integer, minimum: 1 }
+        curriculum:
+          $ref: '#/components/schemas/CurriculumAnchor'
+        targetSchoolId: { type: string, format: uuid }
+        targetStudentId: { type: string, format: uuid }
+        targetClassId: { type: string, format: uuid }
+        targetGradeLevel: { type: string }
+        targetStageKey: { type: string }
+        source: { type: string, enum: [teacherAssigned, recommended, curriculumRequired, reassessment, reinforcement] }
+        dueAt: { type: string, format: date-time }
+    AssignmentResponse:
+      type: object
+      required: [id, tenantId, activityId, status, source, targetSchoolId]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        activityId: { type: string }
+        activityVersion: { type: integer }
+        exerciseId: { type: string, nullable: true }
+        curriculumVersion: { type: string }
+        targetSchoolId: { type: string }
+        targetStudentId: { type: string, nullable: true }
+        targetClassId: { type: string, nullable: true }
+        assignedBy: { type: string }
+        assignedByRole: { type: string }
+        source: { type: string }
+        status: { type: string, enum: [ACTIVE, CANCELLED, CLOSED] }
+        dueAt: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    AssignmentMutationResponse:
+      type: object
+      required: [assignment, created]
+      properties:
+        assignment:
+          $ref: '#/components/schemas/AssignmentResponse'
+        created: { type: boolean }
+    AssignmentListResponse:
+      type: object
+      required: [total, limit, offset, items]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentResponse'
+    AttemptCreateRequest:
+      type: object
+      required: [activityId, attemptNumber]
+      properties:
+        activityId: { type: string, minLength: 1 }
+        assignmentId: { type: string, format: uuid }
+        exerciseId: { type: string, format: uuid }
+        curriculum:
+          $ref: '#/components/schemas/CurriculumAnchor'
+          description: OPTIONAL — the bound PUBLISHED exercise is the CANONICAL owner of the curriculum anchor (21-O); the runtime reads the anchor from the exercise row and ignores client copies. Kept for contract backward-compat only.
+        attemptNumber: { type: integer, minimum: 1 }
+        engineInput:
+          type: object
+          additionalProperties: true
+          description: engine-native start input (passage/task reference) — opaque to the contract, owned by the resolved engine
+        studentId:
+          type: string
+          format: uuid
+          description: required when a STAFF actor creates on behalf of a student; students always act on themselves
+    AttemptResponse:
+      type: object
+      required: [id, tenantId, studentId, activityId, attemptNumber, state]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        assignmentId: { type: string, nullable: true }
+        activityId: { type: string }
+        exerciseId: { type: string, nullable: true }
+        curriculumVersion: { type: string }
+        attemptNumber: { type: integer }
+        state: { type: string, enum: [CREATED, STARTED, IN_PROGRESS, SUBMITTED, MEASURED, EVIDENCE_RECORDED] }
+        startedAt: { type: string, nullable: true }
+        submittedAt: { type: string, nullable: true }
+        durationMs: { type: integer, nullable: true }
+        evidenceRef: { type: string, nullable: true, description: POINTER to canonical Evidence — never a copy }
+        operationKey: { type: string }
+    AttemptMutationResponse:
+      type: object
+      required: [attempt, created]
+      properties:
+        attempt:
+          $ref: '#/components/schemas/AttemptResponse'
+        created: { type: boolean }
+    AttemptListResponse:
+      type: object
+      required: [total, limit, offset, items]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptResponse'
+    AttemptSubmitRequest:
+      type: object
+      properties:
+        submittedAt: { type: string, format: date-time }
+        durationMs: { type: integer, minimum: 0 }
+        engineInput:
+          type: object
+          additionalProperties: true
+          description: engine-native submission input (passageId/sessionId/audioKey/expectedText for READING; expected/actual for DICTATION) — opaque to the contract, owned by the resolved engine
+        time:
+          type: object
+          description: operational time segments (CORE-23 TimeEvidence) — state, not measurements
+          properties:
+            activityDurationMs: { type: integer, minimum: 0 }
+            responseDurationMs: { type: integer, minimum: 0 }
+            thinkingDurationMs: { type: integer, minimum: 0 }
+            listeningDurationMs: { type: integer, minimum: 0 }
+            pauseDurationMs: { type: integer, minimum: 0 }
+            replayDurationMs: { type: integer, minimum: 0 }
+    AttemptRecordRequest:
+      type: object
+      required: [evidenceRef]
+      properties:
+        evidenceRef:
+          type: string
+          format: uuid
+          description: POINTER to a REAL canonical Evidence row in the same tenant
+    EvidenceResponse:
+      type: object
+      description: Canonical evidence row (read-only projection)
+      required: [id, tenantId, studentId, evidenceType, occurredAt, sourceEngine]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        evidenceType: { type: string }
+        subject: { type: string, nullable: true }
+        occurredAt: { type: string, format: date-time }
+        sourceEngine: { type: string }
+        activityId: { type: string, nullable: true }
+        confidence: { type: number, nullable: true }
+        durationMs: { type: integer, nullable: true }
+    EvidenceListResponse:
+      type: object
+      required: [total, limit, offset, items]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceResponse'
+    InsightsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          description: explainable insights — evidenceRefs + confidence + explanation; recommendations require the Teacher Decision Gate (never auto-executed)
+          items:
+            type: object
+            required: [id, signal, confidence, explanation]
+            properties:
+              id: { type: string }
+              signal: { type: string }
+              confidence: { type: number }
+              explanation: { type: string }
+              evidenceRefs:
+                type: array
+                items: { type: string }
+              recommendation: { type: object, nullable: true, additionalProperties: true }
+    AggregateResponse:
+      type: object
+      required: [groups]
+      properties:
+        groups:
+          type: array
+          description: privacy-suppressed groups (status=INSUFFICIENT_EVIDENCE below minimum aggregation size; trend = current vs previous window)
+          items:
+            type: object
+            required: [evidenceType, sampleSize, assessedStudents, studentsInScope, assessmentCoverage, confidence, status, timePeriod]
+            properties:
+              schoolId: { type: string, nullable: true }
+              stageKey: { type: string, nullable: true }
+              gradeLevel: { type: string, nullable: true }
+              subject: { type: string, nullable: true }
+              evidenceType: { type: string }
+              mean: { type: number, nullable: true }
+              sampleSize: { type: integer }
+              assessedStudents: { type: integer }
+              studentsInScope: { type: integer }
+              assessmentCoverage: { type: number }
+              confidence: { type: string, enum: [low, medium, high] }
+              status: { type: string, enum: [OK, INSUFFICIENT_EVIDENCE] }
+              trend:
+                type: object
+                nullable: true
+                properties:
+                  current: { type: number, nullable: true }
+                  previous: { type: number, nullable: true }
+                  direction: { type: string, enum: [UP, DOWN, FLAT] }
+              timePeriod:
+                type: object
+                required: [from, to]
+                properties:
+                  from: { type: string, format: date-time }
+                  to: { type: string, format: date-time }

@@ -1,0 +1,10 @@
+# P5.2 SHA — apps/api canonical files (express 5.2.1 runtime) — ab3888a
+48853b98bcffb607f83bca9c911d1d74da7926a35f9132f1a6cd8a2a5165cef3  apps/api/package.json
+083aae42566d9382f17e58ab3f7384ca8c1b7c3fcd7e948cd758063652008f8f  apps/api/src/app.ts
+06a8401490728b1c32d61c18641618a8e170090c65e644390710adc5e233350b  apps/api/src/index.ts
+2623a7caab6797825936d09564d54b642efdd8a33383bb1ac219ac0a0669ca7e  apps/api/src/routes/index.ts
+1c4dde4da14720353fddaca8a9eb224008c83d2e2ebdb6a12077d9d91e5a72bd  apps/api/src/routes/auth.ts
+0386ceddb4ff4bff220af72ca38a62191ad95a2f41fd619df3bb9ceffce03db2  apps/api/src/routes/health.ts
+39889dff73fdfd1d8fcc2a73e0779e92d0b5f4b627f1a45c08ec88f1cb0dfbd8  apps/api/src/middleware/auth.ts
+72950fb5f9a718903452a9142ee7b709ebf8a90fc70b40463fe73fe71dfba86c  apps/api/src/lib/logger.ts
+50030f90a5eac8c03dedce9f585b79921a5a5997c8537471d5e1fbd0342478be  apps/api/test/auth.test.ts

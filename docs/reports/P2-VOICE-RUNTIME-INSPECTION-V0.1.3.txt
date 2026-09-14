@@ -1,0 +1,830 @@
+=== apps/api/src/routes/reading.ts ===
+   140	    return;
+   141	  }
+   142	  res.json(status);
+   143	});
+   144	
+   145	// Reports
+   146	router.get("/reports/student/:studentId", authenticate, async (req: Request, res: Response) => {
+   147	  res.json(await listReportsByStudent(String(req.params.studentId)));
+   148	});
+   149	
+   150	router.get("/reports/:id", authenticate, async (req: Request, res: Response) => {
+   151	  const row = await getReport(String(req.params.id));
+   152	  if (!row) {
+   153	    res.status(404).json({ error: "NOT_FOUND" });
+   154	    return;
+   155	  }
+   156	  res.json(row);
+   157	});
+   158	
+   159	// S3 presigned URLs
+   160	router.get("/audio/presign", authenticate, async (req: Request, res: Response) => {
+   161	  const key = String(req.query.key || "");
+   162	  const op = String(req.query.op || "getObject") as "getObject" | "putObject";
+   163	  if (!key) {
+   164	    res.status(400).json({ error: "key required" });
+   165	    return;
+   166	  }
+   167	  try {
+   168	    const url = await presignAudio(key, op);
+   169	    res.json({ url });
+   170	  } catch (err: any) {
+   171	    res.status(500).json({ error: err?.message || "PRESIGN_FAILED" });
+   172	  }
+   173	});
+   174	
+   175	export default router;
+
+=== apps/api/src/v1/activity.ts ===
+   225	    const studentId = c.role === "student" ? (req.user as AuthUser).studentId! : "";
+   226	    const engineInput = body.engineInput ?? {};
+   227	    const result = await submitAttemptExecution({
+   228	      tenantId: c.tenantId,
+   229	      studentId,
+   230	      actor: { actorId: c.sub, actorRole: c.role },
+   231	      executionAttemptId: paramStr(req.params.attemptId),
+   232	      submittedAt: body.submittedAt ? new Date(body.submittedAt) : undefined,
+   233	      durationMs: body.durationMs,
+   234	      time: body.time,
+   235	      adapters: engineAdapters,
+   236	      enqueueAsync: async (payload) => {
+   237	        // Engine service owns the reading attempt/session rows + the queue job.
+   238	        const ei = payload.engineInput as { passageId?: string; sessionId?: string; audioKey?: string; expectedText?: string };
+   239	        const enq = await enqueueAnalysis(
+   240	          { userId: c.sub, role: c.role, tenantId: c.tenantId, schoolId: (req.user as AuthUser).schoolId, organizationId: (req.user as AuthUser).organizationId },
+   241	          { studentId: payload.studentId, passageId: String(ei.passageId ?? ""), sessionId: String(ei.sessionId ?? ""), audioKey: String(ei.audioKey ?? ""), expectedText: ei.expectedText ? String(ei.expectedText) : undefined, executionAttemptId: payload.executionAttemptId },
+   242	        );
+   243	        return { jobId: enq.jobId };
+   244	      },
+   245	      engineInput,
+   246	    });
+   247	    if (result.mode === "async") {
+   248	      res.json(toAttemptResponse(result.attempt));
+   249	      return;
+   250	    }
+   251	    // ADR-027/V-3 — Learning Loop runtime call site #2 (sync engines:
+   252	    // NUMERACY / ASSESSMENT). Trigger: submitAttemptExecution RESOLVED —
+   253	    // canonical evidence is ALREADY persisted by the engine adapters
+   254	    // (numeracy:attempt:{id} / assessment:attempt:{id}). First pass runs
+   255	    // WITHOUT a teacher decision — the loop stops at the Teacher Decision
+   256	    // Gate by design (proposal stays PENDING). Loop failure NEVER fails the
+   257	    // request (evidence is canonical); the loop is idempotently resumable
+   258	    // with the same evidence rows (R-027-05 restored-identity semantics),
+   259	    // so replayed submits (mode sync, measurements null) re-invoke safely.
+   260	    try {
+   261	      const { tenantId, studentId } = result.trace;
+   262	      if (tenantId && studentId) {
+   263	        const { runLearningLoop } = await import("@workspace/learning-loop");
+   264	        const { listEvidenceForStudent } = await import("@workspace/db");
+   265	        const rows = await listEvidenceForStudent({ tenantId, studentId });
+   266	        await runLearningLoop({ tenantId, studentId, rows });
+   267	      }
+   268	    } catch (err) {
+   269	      // ADR-027/V-3 §9: loop failure never fails the submit — evidence is
+   270	      // canonical and the loop is idempotently resumable on the next trigger.
+   271	      loopLog.error({ err }, "Learning loop failed after sync submit — evidence unaffected, resumable");
+   272	    }
+   273	    const final = await getAttempt(c.tenantId, paramStr(req.params.attemptId));
+   274	    res.json(toAttemptResponse(final));
+   275	  } catch (e) {
+   276	    if (!mapCapabilityError(res, e)) throw e;
+   277	  }
+   278	});
+   279	
+   280	// ===== POST /v1/attempts/{attemptId}/record (recordAttempt — POINTER to canonical Evidence) =====
+   281	router.post("/attempts/:attemptId/record", authenticate, async (req: Request, res: Response) => {
+   282	  const c = ctx(req, res);
+   283	  if (!c) return;
+   284	  const body = validateBody<AttemptRecordRequest>(AttemptRecordRequestSchema, req, res);
+   285	  if (!body) return;
+   286	  try {
+   287	    // Student ownership first (capability re-verifies the chain).
+   288	    const attemptRow = await getAttempt(c.tenantId, paramStr(req.params.attemptId));
+   289	    if (c.role === "student" && attemptRow.studentId !== (req.user as AuthUser).studentId) {
+   290	      apiError(res, 403, "STUDENT_CONTEXT_MISMATCH", "Students may only record their own attempts");
+
+=== engines/reading-engine/src/service/reading-service.ts ===
+   150	    audioKey,
+   151	    expectedText: expectedText || "",
+   152	    correlationId,
+   153	    attemptId: attemptRow.id,
+   154	    tenantId,
+   155	    ...(input.executionAttemptId ? { executionAttemptId: input.executionAttemptId } : {}),
+   156	  });
+   157	  logger.info({ jobId: job.id, attemptId: attemptRow.id }, "Analysis job queued via REST");
+   158	  return { jobId: String(job.id), attemptId: attemptRow.id };
+   159	}
+   160	
+   161	export async function getAnalysisJob(jobId: string) {
+   162	  const status = await getJobStatus(jobId);
+   163	  return status ?? null;
+   164	}
+   165	
+   166	export async function listReportsByStudent(studentId: string) {
+   167	  const rows = await db
+   168	    .select()
+   169	    .from(reports)
+   170	    .innerJoin(attempts, eq(reports.attemptId, attempts.id))
+   171	    .where(eq(attempts.studentId, studentId))
+   172	    .orderBy(desc(reports.createdAt))
+   173	    .limit(100);
+   174	  return rows.map((r) => r.reports);
+   175	}
+   176	
+   177	export async function getReport(id: string) {
+   178	  const [row] = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+   179	  return row ?? null;
+   180	}
+   181	
+   182	export function presignAudio(key: string, op: "getObject" | "putObject") {
+   183	  return presignUrl(key, op);
+   184	}
+
+=== engines/reading-engine/src/security/s3-client.ts ===
+     1	import AWS from "aws-sdk";
+     2	import { logger } from "../observability/logger.js";
+     3	
+     4	const s3 = new AWS.S3({
+     5	  region: process.env.AWS_REGION || "us-east-1",
+     6	  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+     7	  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+     8	  signatureVersion: "v4",
+     9	});
+    10	
+    11	const BUCKET = process.env.S3_BUCKET || "buytuk-audio";
+    12	const PRESIGNED_EXPIRES = parseInt(process.env.S3_PRESIGNED_EXPIRES || "3600");
+    13	
+    14	export async function uploadAudio(
+    15	  key: string,
+    16	  body: Buffer | Uint8Array,
+    17	  contentType: string = "application/octet-stream",
+    18	  metadata: Record<string, string> = {}
+    19	): Promise<string> {
+    20	  const log = logger.child({ component: "S3", key });
+    21	
+    22	  try {
+    23	    await s3.putObject({
+    24	      Bucket: BUCKET,
+    25	      Key: key,
+    26	      Body: body,
+    27	      ContentType: contentType,
+    28	      ServerSideEncryption: "aws:kms",
+    29	      Metadata: metadata,
+    30	    }).promise();
+    31	
+    32	    log.info({ size: body.length }, "Audio uploaded");
+    33	    return key;
+    34	  } catch (err) {
+    35	    log.error({ err }, "S3 upload failed");
+    36	    throw err;
+    37	  }
+    38	}
+    39	
+    40	export async function downloadAudio(key: string): Promise<{
+    41	  encryptedBuffer: Buffer;
+    42	  encryptedKey: string;
+    43	}> {
+    44	  const log = logger.child({ component: "S3", key });
+    45	
+    46	  try {
+    47	    const result = await s3.getObject({
+    48	      Bucket: BUCKET,
+    49	      Key: key,
+    50	    }).promise();
+    51	
+    52	    const encryptedBuffer = result.Body as Buffer;
+    53	    const encryptedKey = result.Metadata?.["x-amz-key"] || "";
+    54	
+    55	    log.info({ size: encryptedBuffer.length }, "Audio downloaded");
+    56	    return { encryptedBuffer, encryptedKey };
+    57	  } catch (err) {
+    58	    log.error({ err }, "S3 download failed");
+    59	    throw err;
+    60	  }
+    61	}
+    62	
+    63	export async function deleteAudio(key: string): Promise<void> {
+    64	  const log = logger.child({ component: "S3", key });
+    65	
+    66	  try {
+    67	    await s3.deleteObject({ Bucket: BUCKET, Key: key }).promise();
+    68	    log.info("Audio deleted");
+    69	  } catch (err) {
+    70	    log.error({ err }, "S3 delete failed");
+    71	    throw err;
+    72	  }
+    73	}
+    74	
+    75	export async function presignUrl(key: string, operation: "getObject" | "putObject"): Promise<string> {
+    76	  const params: any = {
+    77	    Bucket: BUCKET,
+    78	    Key: key,
+    79	    Expires: PRESIGNED_EXPIRES,
+    80	  };
+    81	
+    82	  if (operation === "putObject") {
+    83	    params.ContentType = "application/octet-stream";
+    84	  }
+    85	
+    86	  return s3.getSignedUrlPromise(operation, params);
+    87	}
+    88	
+    89	// Stub: actual audio decryption is in encryption.ts
+    90	export async function decryptAudio(
+    91	  encryptedBuffer: Buffer,
+    92	  encryptedKey: string
+    93	): Promise<Float32Array> {
+    94	  const { decryptAudio: _decrypt } = await import("./encryption.js");
+    95	  return _decrypt(encryptedBuffer, encryptedKey);
+    96	}
+
+=== engines/reading-engine/src/security/encryption.ts ===
+     1	import { createCipheriv, createDecipheriv, randomBytes, createSecretKey } from "node:crypto";
+     2	import { logger } from "../observability/logger.js";
+     3	
+     4	const ALGORITHM = "aes-256-gcm";
+     5	const KEY_LENGTH = 32;
+     6	const IV_LENGTH = 16;
+     7	const AUTH_TAG_LENGTH = 16;
+     8	
+     9	// Key Encryption Key (KEK) from environment
+    10	const KEK_HEX = process.env.AUDIO_KEK;
+    11	if (!KEK_HEX || KEK_HEX.length !== 64) {
+    12	  throw new Error("AUDIO_KEK must be a 64-character hex string (32 bytes)");
+    13	}
+    14	const KEK = Buffer.from(KEK_HEX, "hex");
+    15	
+    16	/**
+    17	 * Encrypts a DEK (Data Encryption Key) with the KEK
+    18	 */
+    19	function wrapKey(dek: Buffer): Buffer {
+    20	  const iv = randomBytes(IV_LENGTH);
+    21	  const cipher = createCipheriv(ALGORITHM, KEK, iv);
+    22	  const encrypted = Buffer.concat([cipher.update(dek), cipher.final()]);
+    23	  const tag = cipher.getAuthTag();
+    24	  return Buffer.concat([iv, tag, encrypted]);
+    25	}
+    26	
+    27	/**
+    28	 * Decrypts a wrapped DEK using the KEK
+    29	 */
+    30	function unwrapKey(wrapped: Buffer): Buffer {
+    31	  const iv = wrapped.slice(0, IV_LENGTH);
+    32	  const tag = wrapped.slice(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+    33	  const data = wrapped.slice(IV_LENGTH + AUTH_TAG_LENGTH);
+    34	
+    35	  const decipher = createDecipheriv(ALGORITHM, KEK, iv);
+    36	  decipher.setAuthTag(tag);
+    37	
+    38	  return Buffer.concat([decipher.update(data), decipher.final()]);
+    39	}
+    40	
+    41	/**
+    42	 * Encrypts raw PCM audio with per-file DEK
+    43	 * Returns: { encryptedBuffer, encryptedKey (hex) }
+    44	 */
+    45	export async function encryptAudio(
+    46	  pcm: Float32Array
+    47	): Promise<{ encryptedBuffer: Buffer; encryptedKey: string }> {
+    48	  const dek = randomBytes(KEY_LENGTH);
+    49	  const iv = randomBytes(IV_LENGTH);
+    50	
+    51	  const raw = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength);
+    52	
+    53	  const cipher = createCipheriv(ALGORITHM, dek, iv);
+    54	  const encrypted = Buffer.concat([cipher.update(raw), cipher.final()]);
+    55	  const tag = cipher.getAuthTag();
+    56	
+    57	  const encryptedBuffer = Buffer.concat([iv, tag, encrypted]);
+    58	  const wrapped = wrapKey(dek);
+    59	  const encryptedKey = wrapped.toString("hex");
+    60	
+    61	  logger.debug({ size: raw.length, encryptedSize: encryptedBuffer.length }, "Audio encrypted");
+    62	
+    63	  return { encryptedBuffer, encryptedKey };
+    64	}
+    65	
+    66	/**
+    67	 * Decrypts audio back to Float32Array PCM
+    68	 */
+    69	export async function decryptAudio(
+    70	  encryptedBuffer: Buffer,
+    71	  encryptedKey: string
+    72	): Promise<Float32Array> {
+    73	  const wrapped = Buffer.from(encryptedKey, "hex");
+    74	  const dek = unwrapKey(wrapped);
+    75	
+    76	  const iv = encryptedBuffer.slice(0, IV_LENGTH);
+    77	  const tag = encryptedBuffer.slice(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+    78	  const data = encryptedBuffer.slice(IV_LENGTH + AUTH_TAG_LENGTH);
+    79	
+    80	  const decipher = createDecipheriv(ALGORITHM, dek, iv);
+    81	  decipher.setAuthTag(tag);
+    82	
+    83	  const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
+    84	
+    85	  logger.debug({ size: decrypted.length }, "Audio decrypted");
+    86	
+    87	  return new Float32Array(decrypted.buffer, decrypted.byteOffset, decrypted.byteLength / 4);
+    88	}
+
+=== packages/database/src/schema/reading.ts ===
+    20	    tenantId: text("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+    21	    teacherId: text("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+    22	    classroomId: text("classroom_id").references(() => classesTable.id, { onDelete: "set null" }),
+    23	    title: varchar("title", { length: 500 }).notNull(),
+    24	    text: text("text").notNull(),
+    25	    difficulty: integer("difficulty").default(1).notNull(),
+    26	    grade: varchar("grade", { length: 20 }),
+    27	    isActive: boolean("is_active").default(true).notNull(),
+    28	    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    29	    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    30	  },
+    31	  (t) => ({ teacherIdx: index("passages_teacher_idx").on(t.teacherId), classIdx: index("passages_class_idx").on(t.classroomId) }),
+    32	);
+    33	
+    34	// ===== Attempts (Reading owner) =====
+    35	export const attemptsTable = pgTable(
+    36	  "attempts",
+    37	  {
+    38	    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    39	    tenantId: text("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+    40	    sessionId: text("session_id").notNull().references(() => readingSessionsTable.id, { onDelete: "cascade" }),
+    41	    studentId: text("student_id").notNull().references(() => studentsTable.id, { onDelete: "restrict" }),
+    42	    passageId: text("passage_id").notNull().references(() => passagesTable.id, { onDelete: "restrict" }),
+    43	    audioKey: text("audio_key"),
+    44	    encryptedKey: text("encrypted_key"),
+    45	    transcript: text("transcript"),
+    46	    durationSec: real("duration_sec"),
+    47	    jobId: text("job_id"),
+    48	    jobStatus: varchar("job_status", { length: 20 }).default("pending"),
+    49	    correlationId: text("correlation_id"),
+    50	    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    51	    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    52	  },
+    53	  (t) => ({ studentIdx: index("attempts_student_idx").on(t.studentId), sessionIdx: index("attempts_session_idx").on(t.sessionId) }),
+    54	);
+    55	
+    56	// ===== Reports (Reading owner) =====
+    57	export const reportsTable = pgTable(
+    58	  "reports",
+    59	  {
+    60	    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    61	    tenantId: text("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+    62	    attemptId: text("attempt_id").notNull().references(() => attemptsTable.id, { onDelete: "cascade" }),
+    63	    overallScore: real("overall_score").notNull(),
+    64	    accuracyScore: real("accuracy_score").notNull(),
+    65	    pronunciationScore: real("pronunciation_score").notNull(),
+    66	    fluencyScore: real("fluency_score").notNull(),
+    67	    prosodyScore: real("prosody_score").notNull(),
+    68	    wpm: real("wpm").notNull(),
+    69	    data: jsonb("data").notNull(),
+    70	    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    71	  },
+    72	  (t) => ({ attemptIdx: uniqueIndex("reports_attempt_idx").on(t.attemptId) }),
+    73	);
+    74	
+    75	// ===== Phoneme Stats (Reading owner — exclusive) =====
+    76	export const phonemeStatsTable = pgTable(
+    77	  "phoneme_stats",
+    78	  {
+    79	    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    80	    tenantId: text("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+    81	    studentId: text("student_id").notNull().references(() => studentsTable.id, { onDelete: "restrict" }),
+    82	    phoneme: varchar("phoneme", { length: 20 }).notNull(),
+    83	    totalOccurrences: integer("total_occurrences").default(0).notNull(),
+    84	    errors: integer("errors").default(0).notNull(),
+    85	    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    86	    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    87	  },
+    88	  (t) => ({ studentPhoneme: uniqueIndex("phoneme_stats_unique").on(t.studentId, t.phoneme) }),
+    89	);
+    90	
+    91	// ===== Mastery Records (Mastery owner — single source) =====
+    92	export const masteryRecordsTable = pgTable(
+    93	  "mastery_records",
+    94	  {
+    95	    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    96	    tenantId: text("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+    97	    studentId: text("student_id").notNull().references(() => studentsTable.id, { onDelete: "restrict" }),
+    98	    passageId: text("passage_id").notNull().references(() => passagesTable.id, { onDelete: "restrict" }),
+    99	    level: varchar("level", { length: 30 }).notNull(),
+   100	    score: real("score").notNull(),
+   101	    attempts: integer("attempts").default(1).notNull(),
+   102	    trend: varchar("trend", { length: 10 }),
+   103	    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+   104	  },
+   105	  (t) => ({ unique: uniqueIndex("mastery_records_unique").on(t.studentId, t.passageId) }),
+   106	);
+   107	
+   108	// ===== Exercise Assignments =====
+   109	export const exerciseAssignmentsTable = pgTable("exercise_assignments", {
+   110	  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+   111	  tenantId: text("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
+   112	  studentId: text("student_id").notNull().references(() => studentsTable.id, { onDelete: "restrict" }),
+   113	  attemptId: text("attempt_id").references(() => attemptsTable.id, { onDelete: "set null" }),
+   114	  exerciseId: varchar("exercise_id", { length: 100 }).notNull(),
+   115	  reason: text("reason"),
+   116	  completedAt: timestamp("completed_at", { withTimezone: true }),
+   117	  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+   118	});
+   119	
+   120	// ===== API Keys =====
+
+=== engines/reading-engine/src/queue/workers/analyze.processor.ts ===
+    80	  const SAMPLE_RATE = 16000;
+    81	
+    82	  log.info("Starting analysis pipeline");
+    83	
+    84	  // Stage 1: Download
+    85	  await job.updateProgress(5);
+    86	  log.info("Stage 1: Downloading audio");
+    87	  const { encryptedBuffer, encryptedKey } = await downloadAudio(audioKey);
+    88	
+    89	  // Stage 2: Decrypt
+    90	  await job.updateProgress(10);
+    91	  log.info("Stage 2: Decrypting audio");
+    92	  const rawPcm = await decryptAudio(encryptedBuffer, encryptedKey);
+    93	
+    94	  // Stage 3: Enhancement
+    95	  await job.updateProgress(15);
+    96	  log.info("Stage 3: Audio enhancement");
+    97	  enhancement.validate(rawPcm, SAMPLE_RATE);
+    98	  const enhancedPcm = await enhancement.denoise(rawPcm, correlationId);
+    99	
+   100	  // Stage 4: Feature Extraction
+   101	  await job.updateProgress(20);
+   102	  log.info("Stage 4: Feature extraction");
+   103	  const features = featureExtractor.extract(enhancedPcm, SAMPLE_RATE, correlationId);
+   104	
+   105	  // Stage 5: VAD
+   106	  await job.updateProgress(25);
+   107	  log.info("Stage 5: Voice activity detection");
+   108	  const segments = await vad.detect(enhancedPcm, SAMPLE_RATE, correlationId);
+   109	  const mergedSegments = vad.mergeSegments(segments);
+   110	
+   111	  if (mergedSegments.length === 0) {
+   112	    throw new Error("No speech detected");
+   113	  }
+   114	
+   115	  // Stage 6: STT
+   116	  await job.updateProgress(35);
+   117	  log.info("Stage 6: Speech transcription");
+   118	  const sttResult = await stt.transcribe(enhancedPcm, SAMPLE_RATE, correlationId);
+   119	
+   120	  // Stage 7: G2P
+   121	  await job.updateProgress(45);
+   122	  log.info("Stage 7: G2P conversion");
+   123	  const diacritizedExpected = await new G2PEngine().diacritizeSentence(expectedText, correlationId);
+   124	
+   125	  // Stage 8: Forced Alignment
+   126	  await job.updateProgress(60);
+   127	  log.info("Stage 8: Forced alignment");
+   128	  const wordAlignments = await forcedAlignment.align(
+   129	    enhancedPcm, SAMPLE_RATE, sttResult.text, correlationId,
+   130	  );
+   131	
+   132	  // Stage 9: DTW Alignment
+   133	  await job.updateProgress(70);
+   134	  log.info("Stage 9: DTW alignment");
+   135	  const expectedWords = expectedText.split(/\s+/).filter(Boolean);
+   136	  const actualWords = sttResult.text.split(/\s+/).filter(Boolean);
+   137	  const wordDTW = aligner.align(expectedWords, actualWords, correlationId);
+   138	
+   139	  const wer = wordDTW.ops.filter((o) => o.type !== "match").length / Math.max(expectedWords.length, 1);
+   140	
+   141	  const alignment: AlignmentResult = {
+   142	    wordOps: wordDTW.ops,
+   143	    phonemeOps: [],
+   144	    wordErrorRate: wer,
+   145	    phonemeErrorRate: 0,
+   146	    totalErrors: wordDTW.ops.filter((o) => o.type !== "match").length,
+   147	  };
+   148	
+   149	  // Stage 10: Scoring
+   150	  await job.updateProgress(80);
+
+=== engines/reading-engine/src/pipeline/inference-client.ts ===
+     1	import * as grpc from "@grpc/grpc-js";
+     2	import * as protoLoader from "@grpc/proto-loader";
+     3	import { logger } from "../observability/logger.js";
+     4	import { metrics } from "../observability/metrics.js";
+     5	
+     6	const PROTO_PATH = process.env.INFERENCE_PROTO_PATH || "./inference-gateway/proto/inference.proto";
+     7	const GATEWAY_URL = process.env.INFERENCE_GATEWAY_URL || "localhost:50050";
+     8	const API_KEY = process.env.INFERENCE_API_KEY || "";
+     9	
+    10	let client: any = null;
+    11	
+    12	async function getClient() {
+    13	  if (client) return client;
+    14	
+    15	  const packageDefinition = await protoLoader.load(PROTO_PATH, {
+    16	    keepCase: true,
+    17	    longs: String,
+    18	    enums: String,
+    19	    defaults: true,
+    20	    oneofs: true,
+    21	  });
+    22	
+    23	  const proto = grpc.loadPackageDefinition(packageDefinition) as any;
+    24	
+    25	  client = new proto.inference.InferenceService(
+    26	    GATEWAY_URL,
+    27	    grpc.credentials.createInsecure(),
+    28	    {
+    29	      "grpc.max_receive_message_length": 100 * 1024 * 1024, // 100MB
+    30	      "grpc.max_send_message_length": 100 * 1024 * 1024,
+    31	    }
+    32	  );
+    33	
+    34	  return client;
+    35	}
+    36	
+    37	export async function callInferenceGateway<T>(
+    38	  method: string,
+    39	  request: any,
+    40	  /** ACR-E6-001 (P2) — ADDITIVE options: enforced deadline + tenant metadata.
+    41	   * Omitted = exact legacy behavior (existing STT/Align/G2P callers untouched). */
+    42	  options?: { deadlineMs?: number; tenantId?: string }
+    43	): Promise<T> {
+    44	  const startTime = Date.now();
+    45	  const log = logger.child({ method, correlationId: request.correlationId });
+    46	
+    47	  try {
+    48	    const c = await getClient();
+    49	
+    50	    return new Promise((resolve, reject) => {
+    51	      const metadata = new grpc.Metadata();
+    52	      metadata.add("authorization", `Bearer ${API_KEY}`);
+    53	      metadata.add("x-correlation-id", request.correlationId || "");
+    54	      if (options?.tenantId) metadata.add("x-tenant-id", options.tenantId);
+    55	
+    56	      // grpc-js: (request, metadata, [options], callback). The options form
+    57	      // (with an enforced deadline) is used ONLY when a deadline is provided.
+    58	      const callArgs: unknown[] = [request, metadata];
+    59	      if (options?.deadlineMs && options.deadlineMs > 0) {
+    60	        callArgs.push({ deadline: Date.now() + options.deadlineMs });
+    61	      }
+    62	      callArgs.push((err: any, response: any) => {
+    63	        const duration = (Date.now() - startTime) / 1000;
+    64	
+    65	        metrics.modelLatency
+    66	          .labels(method, "latest")
+    67	          .observe(duration);
+    68	
+    69	        if (err) {
+    70	          log.error({ err, duration }, "Inference call failed");
+    71	          metrics.pipelineErrors
+    72	            .labels(method, err.code || "UNKNOWN")
+    73	            .inc();
+    74	          reject(err);
+    75	        } else {
+    76	          log.info({ duration }, "Inference call succeeded");
+    77	          resolve(response);
+    78	        }
+    79	      });
+    80	      (c[method] as (...a: unknown[]) => void)(...callArgs);
+    81	    });
+    82	  } catch (err) {
+    83	    log.error({ err }, "Failed to call inference gateway");
+    84	    throw err;
+    85	  }
+    86	}
+    87	
+    88	export async function healthCheck(): Promise<boolean> {
+    89	  try {
+    90	    await callInferenceGateway("Health", {});
+    91	    return true;
+    92	  } catch {
+    93	    return false;
+    94	  }
+    95	}
+
+=== engines/reading-engine/src/pipeline/stt.ts ===
+     1	import { injectable } from "inversify";
+     2	import { callInferenceGateway } from "./inference-client.js";
+     3	import { modelsConfig } from "../../config/models.config.js";
+     4	import { logger } from "../observability/logger.js";
+     5	import { metrics } from "../observability/metrics.js";
+     6	import type { STTResult, WordTimestamp } from "@buytuk/contracts";
+     7	
+     8	/**
+     9	 * Speech-to-Text using Whisper Large V3
+    10	 *
+    11	 * Returns word-level timestamps + real confidence scores from Whisper signals:
+    12	 *   - no_speech_prob
+    13	 *   - avg_logprob
+    14	 *   - compression_ratio
+    15	 */
+    16	@injectable()
+    17	export class WhisperSTT {
+    18	  async transcribe(
+    19	    audio: Float32Array,
+    20	    sampleRate: number,
+    21	    correlationId?: string
+    22	  ): Promise<STTResult> {
+    23	    const log = logger.child({ component: "WhisperSTT", correlationId });
+    24	    const startTime = Date.now();
+    25	
+    26	    const { whisper: whisperCfg } = modelsConfig;
+    27	
+    28	    try {
+    29	      const response = await callInferenceGateway<any>("Transcribe", {
+    30	        audio: Array.from(audio),
+    31	        sample_rate: sampleRate,
+    32	        language: whisperCfg.parameters.language,
+    33	        task: whisperCfg.parameters.task,
+    34	        word_timestamps: whisperCfg.parameters.word_timestamps,
+    35	        chunk_length_s: whisperCfg.parameters.chunk_length_s,
+    36	        stride_length_s: whisperCfg.parameters.stride_length_s,
+    37	        correlation_id: correlationId,
+    38	      });
+    39	
+    40	      const words: WordTimestamp[] = (response.segments || []).flatMap((seg: any) =>
+    41	        (seg.words || []).map((w: any) => ({
+    42	          word: w.word.trim(),
+    43	          start: w.start,
+    44	          end: w.end,
+    45	          confidence: this.combineConfidence(
+    46	            w.no_speech_prob ?? seg.no_speech_prob ?? 0.5,
+    47	            w.avg_logprob ?? seg.avg_logprob ?? -0.5,
+    48	            seg.compression_ratio ?? 1.0
+    49	          ),
+    50	          noSpeechProb: w.no_speech_prob ?? seg.no_speech_prob ?? 0,
+    51	          avgLogprob: w.avg_logprob ?? seg.avg_logprob ?? 0,
+    52	        }))
+    53	      );
+    54	
+    55	      const result: STTResult = {
+    56	        text: response.text.trim(),
+    57	        words,
+    58	        language: "ar",
+    59	        engine: "whisper-large-v3",
+    60	        modelVersion: whisperCfg.version,
+    61	      };
+    62	
+    63	      const duration = (Date.now() - startTime) / 1000;
+    64	      metrics.pipelineDuration.labels("stt").observe(duration);
+    65	
+    66	      log.info({ duration, words: words.length }, "STT completed");
+    67	
+    68	      return result;
+    69	    } catch (err) {
+    70	      log.error({ err }, "STT failed");
+    71	      throw err;
+    72	    }
+    73	  }
+    74	
+    75	  /**
+    76	   * Combine Whisper's 3 confidence signals into one 0..1 score
+    77	   */
+    78	  private combineConfidence(noSpeech: number, logprob: number, compression: number): number {
+    79	    const speechScore = 1 - noSpeech;
+    80	    const logprobScore = Math.max(0, Math.min(1, (logprob + 1)));
+    81	    const compressionScore = compression > 2.4 ? 0.3 : 1.0;
+    82	
+    83	    return 0.5 * speechScore + 0.3 * logprobScore + 0.2 * compressionScore;
+    84	  }
+    85	}
+
+=== engines/reading-engine/src/pipeline/audio-enhancement.ts ===
+     1	import { injectable } from "inversify";
+     2	import { spawn } from "node:child_process";
+     3	import { audioConfig } from "../../config/audio.config.js";
+     4	import { logger } from "../observability/logger.js";
+     5	import { metrics } from "../observability/metrics.js";
+     6	
+     7	/**
+     8	 * Audio Enhancement using DeepFilterNet (native, not WASM)
+     9	 *
+    10	 * Pipeline:
+    11	 *   PCM 16k → DeepFilterNet subprocess → PCM 16k (cleaned)
+    12	 */
+    13	@injectable()
+    14	export class AudioEnhancement {
+    15	  private workerPath: string;
+    16	
+    17	  constructor() {
+    18	    this.workerPath = process.env.DFN_WORKER_PATH || "./dfn-worker";
+    19	  }
+    20	
+    21	  async denoise(pcm16k: Float32Array, correlationId?: string): Promise<Float32Array> {
+    22	    const log = logger.child({ component: "AudioEnhancement", correlationId });
+    23	    const startTime = Date.now();
+    24	
+    25	    return new Promise((resolve, reject) => {
+    26	      const child = spawn(this.workerPath, [
+    27	        "--sample-rate", String(audioConfig.input.sampleRate),
+    28	        "--format", "f32le",
+    29	      ], { stdio: ["pipe", "pipe", "pipe"] });
+    30	
+    31	      const chunks: Buffer[] = [];
+    32	      let stderr = "";
+    33	
+    34	      child.stdout.on("data", (d: Buffer) => chunks.push(d));
+    35	      child.stderr.on("data", (d: Buffer) => {
+    36	        stderr += d.toString();
+    37	        log.debug({ stderr: d.toString() }, "DeepFilterNet output");
+    38	      });
+    39	
+    40	      child.on("close", (code) => {
+    41	        const duration = (Date.now() - startTime) / 1000;
+    42	        metrics.pipelineDuration.labels("audio_enhancement").observe(duration);
+    43	
+    44	        if (code !== 0) {
+    45	          log.error({ code, stderr, duration }, "DeepFilterNet failed");
+    46	          reject(new Error(`DeepFilterNet exited with code ${code}: ${stderr}`));
+    47	          return;
+    48	        }
+    49	
+    50	        const buf = Buffer.concat(chunks);
+    51	        const result = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+    52	
+    53	        log.info({ duration, outputSamples: result.length }, "Audio enhancement completed");
+    54	        resolve(result);
+    55	      });
+    56	
+    57	      child.on("error", (err) => {
+    58	        log.error({ err }, "Failed to spawn DeepFilterNet");
+    59	        reject(err);
+    60	      });
+    61	
+    62	      // Send raw PCM
+    63	      const inputBuf = Buffer.from(pcm16k.buffer, pcm16k.byteOffset, pcm16k.byteLength * 4);
+    64	      child.stdin.write(inputBuf);
+    65	      child.stdin.end();
+    66	    });
+    67	  }
+    68	
+    69	  /**
+    70	   * Validate audio buffer
+    71	   */
+    72	  validate(pcm: Float32Array, sampleRate: number): void {
+    73	    if (pcm.length === 0) {
+    74	      throw new Error("Audio buffer is empty");
+    75	    }
+    76	
+    77	    const durationSec = pcm.length / sampleRate;
+    78	    if (durationSec < audioConfig.processing.minDurationSec) {
+    79	      throw new Error(`Audio too short: ${durationSec}s < ${audioConfig.processing.minDurationSec}s`);
+    80	    }
+    81	
+    82	    if (durationSec > audioConfig.processing.maxDurationSec) {
+    83	      throw new Error(`Audio too long: ${durationSec}s > ${audioConfig.processing.maxDurationSec}s`);
+    84	    }
+    85	
+    86	    if (sampleRate !== audioConfig.input.sampleRate) {
+    87	      throw new Error(`Invalid sample rate: ${sampleRate} != ${audioConfig.input.sampleRate}`);
+    88	    }
+    89	  }
+    90	}
+
+=== apps/api/src/public/app.js ===
+   145	
+   146	// ===== Lesson (real GET /v1/lessons/:id) =====
+   147	async function openLesson(lessonId) {
+   148	  const l = await api("GET", `/v1/lessons/${lessonId}`);
+   149	  if (l.status !== 200 || !l.json?.lesson) {
+   150	    alert(`تعذر فتح الدرس (${l.status})`);
+   151	    return;
+   152	  }
+   153	  state.currentLesson = lessonId;
+   154	  $("lesson-title").textContent = l.json.lesson.title;
+   155	  $("lesson-meta").textContent = `${l.json.lesson.curriculum?.subject ?? ""} · ${l.json.lesson.language ?? ""} · إصدار ${l.json.lesson.version}`;
+   156	  const exs = l.json.exercises ?? [];
+   157	  $("lesson-exercises").innerHTML = exs.length === 0
+   158	    ? `<div class="muted small">لا أنشطة منشورة مرتبطة بهذا الدرس بعد.</div>`
+   159	    : exs.map((x) => {
+   160	        const q = x.metadata?.question ?? x.metadata?.expression ?? null; // real authored payload only
+   161	        const voice = x.expectedResponse?.type === "VOICE";
+   162	        return `<div class="item" data-exercise='${esc(JSON.stringify({ id: x.exerciseId, engine: x.engineBinding, type: x.expectedResponse?.type, metadata: x.metadata ?? null }))}'>
+   163	          <span class="title">${voice ? "🎤 نشاط قراءة (صوتي)" : "✏️ نشاط " + esc(x.engineBinding)}</span>
+   164	          <span class="badge">${esc(x.expectedResponse?.type ?? "")}</span>
+   165	          ${voice ? `<div class="notice">نشاط القراءة الصوتي غير مدعوم في الواجهة بعد (يتطلب تسجيلًا صوتيًا ومسار الاستدلال) — يُنفَّذ حاليًا عبر المسار المثبت في النظام.</div>` : ""}
+   166	          ${!voice && q !== null ? `<div class="title" style="margin-top:.4rem">السؤال: ${esc(q)}</div>` : (!voice ? `<div class="notice">لا نص سؤال مُحاور في هذا التمرين بعد — لن تُعرض بيانات مصطنعة.</div>` : "")}
+   167	          ${!voice ? `<button class="primary" data-start-attempt="${esc(x.exerciseId)}">بدء النشاط</button>` : ""}
+   168	        </div>`;
+   169	      }).join("");
+   170	  document.querySelectorAll("[data-start-attempt]").forEach((b) =>
+   171	    b.addEventListener("click", () => {
+   172	      const box = b.closest("[data-exercise]");
+   173	      startAttempt(JSON.parse(box.dataset.exercise));
+   174	    }));
+   175	  show("view-lesson");
+   176	}
+   177	
+   178	// ===== Activity: attempt lifecycle (real POST /v1/attempts + /submit) =====
+   179	async function startAttempt(ex) {
+   180	  state.currentExercise = ex;
+   181	  state.submitted = false;
+   182	  $("activity-title").textContent = `نشاط ${ex.engine}`;
+   183	  $("activity-meta").textContent = `تمرين ${ex.id}`;
+   184	  const q = ex.metadata?.question ?? ex.metadata?.expression ?? null;
+   185	  $("activity-body").innerHTML = q !== null
+   186	    ? `<div class="item title">السؤال: ${esc(q)}</div>`
+   187	    : `<div class="notice">لا نص سؤال مُحاور في هذا التمرين — أدخل إجابتك وفق تعليمات معلمك.</div>`;
+   188	  $("activity-answer").value = "";
+   189	  $("activity-error").classList.add("hidden");
+   190	  $("activity-notice").classList.add("hidden");

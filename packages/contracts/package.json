@@ -1,0 +1,10 @@
+{
+  "name": "@buytuk/contracts",
+  "version": "0.1.0",
+  "description": "Single source of truth for BuyTuk contracts: DTOs, shared types and learning events (ARCHITECTURE_CONTRACT section 7)",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

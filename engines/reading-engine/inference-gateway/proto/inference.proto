@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package inference;
+
+service InferenceService {
+  // Health check
+  rpc Health (HealthRequest) returns (HealthResponse);
+
+  // Whisper STT
+  rpc Transcribe (TranscribeRequest) returns (TranscribeResponse);
+
+  // WhisperX word alignment
+  rpc AlignWord (AlignWordRequest) returns (AlignWordResponse);
+
+  // MMS-fa phoneme alignment
+  rpc AlignPhoneme (AlignPhonemeRequest) returns (AlignPhonemeResponse);
+
+  // CAMeL G2P
+  rpc G2P (G2PRequest) returns (G2PResponse);
+
+  // LLM Feedback
+  rpc Feedback (FeedbackRequest) returns (FeedbackResponse);
+}
+
+// ===== Health =====
+message HealthRequest {}
+message HealthResponse {
+  bool ok = 1;
+  map<string, string> workers = 2;
+}
+
+// ===== Transcribe =====
+message TranscribeRequest {
+  repeated float audio = 1;
+  int32 sample_rate = 2;
+  string language = 3;
+  string task = 4;
+  bool word_timestamps = 5;
+  int32 chunk_length_s = 6;
+  int32 stride_length_s = 7;
+  string correlation_id = 8;
+}
+
+message WordSegment {
+  string word = 1;
+  float start = 2;
+  float end = 3;
+  float no_speech_prob = 4;
+  float avg_logprob = 5;
+  float compression_ratio = 6;
+}
+
+message Segment {
+  string text = 1;
+  float start = 2;
+  float end = 3;
+  float no_speech_prob = 4;
+  float avg_logprob = 5;
+  float compression_ratio = 6;
+  repeated WordSegment words = 7;
+}
+
+message TranscribeResponse {
+  string text = 1;
+  repeated Segment segments = 2;
+  string language = 3;
+}
+
+// ===== Word Alignment =====
+message AlignWordRequest {
+  repeated float audio = 1;
+  int32 sample_rate = 2;
+  string transcript = 3;
+  int32 batch_size = 4;
+  string align_model = 5;
+  string correlation_id = 6;
+}
+
+message AlignedWord {
+  string word = 1;
+  float start = 2;
+  float end = 3;
+  float score = 4;
+  float confidence = 5;
+}
+
+message AlignWordResponse {
+  repeated AlignedWord words = 1;
+}
+
+// ===== Phoneme Alignment =====
+message AlignPhonemeRequest {
+  repeated float audio = 1;
+  int32 sample_rate = 2;
+  string language = 3;
+  bool return_timestamps = 4;
+  string correlation_id = 5;
+}
+
+message AlignPhonemeResponse {
+  repeated string phonemes = 1;
+  repeated float starts = 2;
+  repeated float ends = 3;
+  repeated float confidences = 4;
+}
+
+// ===== G2P =====
+message G2PRequest {
+  string word = 1;
+  bool diacritize = 2;
+  bool morph_analysis = 3;
+  string correlation_id = 4;
+}
+
+message G2PResponse {
+  string diacritized = 1;
+  string morphology = 2;
+}
+
+// ===== Feedback =====
+message FeedbackRequest {
+  string prompt = 1;
+  string model = 2;
+  float temperature = 3;
+  string correlation_id = 4;
+}
+
+message FeedbackResponse {
+  string text = 1;
+  string model_used = 2;
+  int32 tokens_used = 3;
+}
