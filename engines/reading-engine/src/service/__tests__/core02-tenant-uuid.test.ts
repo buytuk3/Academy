@@ -19,6 +19,7 @@ const hoisted = vi.hoisted(() => {
   const desc = vi.fn((a: unknown) => ({ __desc: a }));
 
   const inserted: { table: unknown; values: Record<string, unknown> }[] = [];
+  const updated: { values: Record<string, unknown>; whereArg: unknown }[] = [];
   const jobPayloads: Record<string, unknown>[] = [];
   const addAnalyzeJob = async (data: Record<string, unknown>, _p?: number) => {
     jobPayloads.push(data);
@@ -58,10 +59,10 @@ const hoisted = vi.hoisted(() => {
         },
       }),
     }),
-    update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
+    update: () => ({ set: (values: Record<string, unknown>) => ({ where: (whereArg: unknown) => { updated.push({ values, whereArg }); return Promise.resolve([]); } }) }),
   };
 
-  return { eq, and, desc, inserted, jobPayloads, addAnalyzeJob, dbMock };
+  return { eq, and, desc, inserted, updated, jobPayloads, addAnalyzeJob, dbMock };
 });
 
 vi.mock("drizzle-orm", () => ({
@@ -74,7 +75,7 @@ vi.mock("@workspace/db", () => ({
   db: hoisted.dbMock,
   healthCheck: vi.fn(async () => true),
   passagesTable: { id: {}, tenantId: {}, classroomId: {}, teacherId: {}, grade: {}, createdAt: {} },
-  attemptsTable: { id: {}, tenantId: {}, sessionId: {}, studentId: {}, passageId: {}, audioKey: {}, encryptedKey: {}, correlationId: {}, jobStatus: {}, createdAt: {} },
+  attemptsTable: { id: {}, tenantId: {}, sessionId: {}, studentId: {}, passageId: {}, audioKey: {}, encryptedKey: {}, correlationId: {}, jobId: {}, jobStatus: {}, createdAt: {} },
   reportsTable: { id: {}, tenantId: {}, attemptId: {}, overallScore: {}, createdAt: {} },
   readingSessionsTable: { id: {}, tenantId: {}, studentId: {}, teacherId: {}, status: {}, durationSeconds: {}, createdAt: {} },
   masteryRecordsTable: { id: {}, tenantId: {}, studentId: {}, passageId: {}, updatedAt: {} },
@@ -88,7 +89,7 @@ vi.mock("../../queue/bullmq.js", () => ({
 vi.mock("../../pipeline/inference-client.js", () => ({ healthCheck: vi.fn(async () => false) }));
 vi.mock("../../security/s3-client.js", () => ({ presignUrl: vi.fn((k: string) => `https://s3/${k}`) }));
 
-const { inserted, jobPayloads } = hoisted;
+const { inserted, updated, jobPayloads } = hoisted;
 
 import { createPassage, enqueueAnalysis, listPassages, listSessionsByStudent, type ReadingContext } from "../reading-service.js";
 import { ReportGenerator } from "../../report/generator.js";
@@ -105,6 +106,7 @@ const ctx: ReadingContext = { userId: U, role: "teacher", tenantId: T };
 describe("CORE-02 — uuid + tenant propagation (reading service)", () => {
   beforeEach(() => {
     inserted.length = 0;
+    updated.length = 0;
     jobPayloads.length = 0;
     vi.clearAllMocks();
   });
@@ -125,8 +127,12 @@ describe("CORE-02 — uuid + tenant propagation (reading service)", () => {
     expect(inserted[0].values).toMatchObject({ tenantId: T, studentId: S, passageId: P, sessionId: SE, jobStatus: "queued" });
     expect(jobPayloads).toHaveLength(1);
     expect(jobPayloads[0]).toMatchObject({ attemptId: "row-c2-1", tenantId: T, studentId: S, passageId: P });
+    expect(updated).toHaveLength(1);
+    expect(updated[0].values).toMatchObject({ jobId: "job-c2-1", jobStatus: "queued" });
+    expect(typeof updated[0].values.correlationId).toBe("string");
     expect(typeof result.attemptId).toBe("string");
     expect(result.attemptId).toBe("row-c2-1");
+    expect(result.jobId).toBe("job-c2-1");
   });
 
   it("enqueueAnalysis rejects without tenant context", async () => {

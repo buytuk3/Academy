@@ -7,6 +7,7 @@ import {
   validateEnv,
   parsePort,
   parseIntDef,
+  parseBool,
   type AppEnv,
 } from "./env.js";
 
@@ -27,9 +28,12 @@ export interface RuntimeConfig {
     region: string;
     accessKeyId: string;
     secretAccessKey: string;
+    sessionToken: string;
     bucket: string;
     presignedExpires: number;
     kek: string;
+    endpointUrl: string;
+    forcePathStyle: boolean;
   };
   inference: {
     gatewayUrl: string;
@@ -97,7 +101,7 @@ export function loadConfig(
       prefix: env.REDIS_PREFIX || "buytuk",
     },
     jwt: {
-      secret: env.JWT_SECRET ?? "",
+      secret: env.JWT_SECRET ?? "dev-secret-change-me",
       accessTtlSeconds: parseIntDef(env.JWT_ACCESS_TTL_SECONDS, 900),
       refreshTtlDays: parseIntDef(env.JWT_REFRESH_TTL_DAYS, 30),
       issuer: env.JWT_ISSUER || "buytuk",
@@ -105,12 +109,15 @@ export function loadConfig(
       algorithm: "HS256",
     },
     storage: {
-      region: env.S3_REGION || "us-east-1",
-      accessKeyId: env.S3_ACCESS_KEY_ID ?? "",
-      secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? "",
+      region: env.AWS_REGION || env.S3_REGION || "us-east-1",
+      accessKeyId: env.AWS_ACCESS_KEY_ID ?? env.S3_ACCESS_KEY_ID ?? "",
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? env.S3_SECRET_ACCESS_KEY ?? "",
+      sessionToken: env.AWS_SESSION_TOKEN ?? env.S3_SESSION_TOKEN ?? "",
       bucket: env.S3_BUCKET || "buytuk-audio",
       presignedExpires: parseIntDef(env.S3_PRESIGNED_EXPIRES, 3600),
-      kek: env.AUDIO_KEK ?? "",
+      kek: env.AUDIO_KEK ?? "dev-kek-change-me",
+      endpointUrl: env.S3_ENDPOINT_URL || env.S3_ENDPOINT || env.AWS_ENDPOINT_URL_S3 || "",
+      forcePathStyle: parseBool(env.S3_FORCE_PATH_STYLE, false),
     },
     inference: {
       gatewayUrl: env.INFERENCE_GATEWAY_URL || "localhost:50051",

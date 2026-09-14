@@ -10,6 +10,9 @@ const FULL_ENV = {
   PORT: "8080",
   REDIS_URL: "redis://cache:6379",
   LOG_LEVEL: "debug",
+  AWS_REGION: "us-east-1",
+  AWS_ACCESS_KEY_ID: "AKIATEST",
+  AWS_SECRET_ACCESS_KEY: "secret-test-key",
 };
 
 describe("config: missing required env (strict)", () => {
@@ -49,6 +52,13 @@ describe("config: valid env", () => {
     expect(c.redis.url).toBe("redis://cache:6379");
     expect(c.jwt.accessTtlSeconds).toBe(900);
     expect(c.observability.logLevel).toBe("debug");
+    expect(c.storage.accessKeyId).toBe("AKIATEST");
+    expect(c.storage.secretAccessKey).toBe("secret-test-key");
+  });
+
+  it("propagates optional AWS session token", () => {
+    const c = loadConfig({ ...FULL_ENV, AWS_SESSION_TOKEN: "session-token-value" }, { strict: true });
+    expect(c.storage.sessionToken).toBe("session-token-value");
   });
 });
 
@@ -86,7 +96,7 @@ describe("config: G5-A.1 / GAP-003 — production secret hardening", () => {
     expect(c.jwt.secret).toBe("dev-secret-change-me");
     expect(c.storage.kek).toBe("dev-kek-change-me");
     const w = validateEnv({ NODE_ENV: "development", JWT_SECRET: "dev-secret-change-me", AUDIO_KEK: "dev-kek-change-me" }, false);
-    expect(w.errors).toHaveLength(0); // value check is strict-mode ONLY
+    expect(w.errors).toHaveLength(0);
   });
 
   it("validateEnv(strict) flags insecure values in errors (unit surface)", () => {
@@ -104,5 +114,22 @@ describe("config: dev defaults (non-strict)", () => {
     expect(c.server.port).toBe(3000);
     expect(c.queue.attempts).toBe(3);
     expect(c.queue.backoffType).toBe("exponential");
+  });
+
+  it("warns when AWS credentials are absent and no local endpoint fallback exists", () => {
+    const warnings: string[] = [];
+    loadConfig({ PORT: "3000" }, { strict: false, warnings });
+    expect(warnings.some((w) => w.includes("AWS/S3 credentials are not configured"))).toBe(true);
+  });
+
+  it("rejects partial AWS credentials when no local endpoint fallback exists", () => {
+    const v = validateEnv({ ...FULL_ENV, AWS_SECRET_ACCESS_KEY: undefined }, false);
+    expect(v.errors.some((e) => e.includes("access key and secret key must be provided together"))).toBe(true);
+  });
+
+  it("downgrades partial AWS credentials to warning when local endpoint fallback exists", () => {
+    const v = validateEnv({ ...FULL_ENV, AWS_SECRET_ACCESS_KEY: undefined, S3_ENDPOINT_URL: "http://127.0.0.1:9000" }, false);
+    expect(v.errors).toHaveLength(0);
+    expect(v.warnings.some((w) => w.includes("access key and secret key must be provided together"))).toBe(true);
   });
 });

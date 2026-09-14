@@ -45,9 +45,18 @@ export interface EnvShape {
   PASSWORD_RESET_TTL_MINUTES?: string;
   PORT?: string;
   HOST?: string;
+  AWS_REGION?: string;
+  AWS_ACCESS_KEY_ID?: string;
+  AWS_SECRET_ACCESS_KEY?: string;
+  AWS_SESSION_TOKEN?: string;
+  AWS_ENDPOINT_URL_S3?: string;
   S3_REGION?: string;
   S3_ACCESS_KEY_ID?: string;
   S3_SECRET_ACCESS_KEY?: string;
+  S3_SESSION_TOKEN?: string;
+  S3_ENDPOINT?: string;
+  S3_ENDPOINT_URL?: string;
+  S3_FORCE_PATH_STYLE?: string;
   S3_BUCKET?: string;
   S3_PRESIGNED_EXPIRES?: string;
   INFERENCE_GATEWAY_URL?: string;
@@ -78,9 +87,6 @@ export function validateEnv(
       else warnings.push(`${msg} (using dev default)`);
     }
   }
-  // G5-A.1 / GAP-003 — value-level hardening (strict/production ONLY):
-  // a PRESENT development-placeholder secret is rejected exactly like a
-  // missing one. Non-strict (dev/test) keeps its fallbacks unchanged.
   if (strict) {
     for (const key of ["JWT_SECRET", "AUDIO_KEK"] as const) {
       if (env[key] && INSECURE_PRODUCTION_VALUES[key].includes(env[key]!)) {
@@ -101,6 +107,31 @@ export function validateEnv(
   if (env.NODE_ENV && !["development", "test", "production"].includes(env.NODE_ENV)) {
     errors.push(`Invalid NODE_ENV: ${env.NODE_ENV}`);
   }
+
+  const awsAccessKeyId = env.AWS_ACCESS_KEY_ID ?? env.S3_ACCESS_KEY_ID;
+  const awsSecretAccessKey = env.AWS_SECRET_ACCESS_KEY ?? env.S3_SECRET_ACCESS_KEY;
+  const awsSessionToken = env.AWS_SESSION_TOKEN ?? env.S3_SESSION_TOKEN;
+  const s3Endpoint = env.S3_ENDPOINT_URL || env.S3_ENDPOINT || env.AWS_ENDPOINT_URL_S3;
+  const hasAccessKey = Boolean(awsAccessKeyId && awsAccessKeyId.trim());
+  const hasSecretKey = Boolean(awsSecretAccessKey && awsSecretAccessKey.trim());
+  const canFallbackToLocalEndpoint = Boolean(s3Endpoint);
+
+  if (hasAccessKey !== hasSecretKey) {
+    const msg = "Invalid AWS credential configuration: access key and secret key must be provided together";
+    if (canFallbackToLocalEndpoint) warnings.push(`${msg} (local S3 endpoint fallback remains available)`);
+    else errors.push(msg);
+  }
+
+  if (awsSessionToken && !hasAccessKey && !hasSecretKey) {
+    const msg = "Invalid AWS credential configuration: session token requires access key and secret key";
+    if (canFallbackToLocalEndpoint) warnings.push(`${msg} (local S3 endpoint fallback remains available)`);
+    else errors.push(msg);
+  }
+
+  if (!hasAccessKey && !hasSecretKey && !s3Endpoint) {
+    warnings.push("AWS/S3 credentials are not configured; presigned upload requires AWS credentials or S3_ENDPOINT_URL for local testing");
+  }
+
   return { errors, warnings };
 }
 

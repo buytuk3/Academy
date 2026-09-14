@@ -1,6 +1,7 @@
-import { config } from "@workspace/config";
+import { config, configWarnings } from "@workspace/config";
 import { createLogger } from "@workspace/observability";
 import { createWorker, analyzeQueue } from "@workspace/queue";
+import { getS3StartupStatus } from "../../../engines/reading-engine/src/security/s3-client.js";
 import { processAnalyzeJob } from "@engine/analyze-processor";
 
 /**
@@ -12,18 +13,18 @@ import { processAnalyzeJob } from "@engine/analyze-processor";
 const logger = createLogger({ level: config.observability.logLevel, name: "buytuk-worker" });
 
 logger.info("BuyTuk unified worker starting");
+for (const warning of configWarnings) {
+  logger.warn({ component: "config" }, warning);
+}
+const s3 = getS3StartupStatus();
+if (s3.ready) {
+  logger.info({ mode: s3.mode, bucket: s3.bucket, region: s3.region, endpointUrl: s3.endpointUrl, hasSessionToken: s3.hasSessionToken, usingLocalEndpointFallback: s3.usingLocalEndpointFallback }, "Worker S3 startup check passed");
+} else {
+  logger.warn({ mode: s3.mode, bucket: s3.bucket, region: s3.region, endpointUrl: s3.endpointUrl, hasPartialCredentials: s3.hasPartialCredentials, hasSessionToken: s3.hasSessionToken }, s3.message);
+}
 
 const worker = createWorker("analyze", async (job) => {
-  // ADR-027/V-3 — fail-closed ordering: the loop triggers ONLY after the
-  // analyze pipeline RESOLVED (canonical evidence + report + mastery already
-  // persisted). A failed job never triggers the loop.
   const result = await processAnalyzeJob(job);
-  // ADR-027/V-3 — Learning Loop runtime call site #1 (async reading flow).
-  // Trigger: canonical evidence write COMPLETED above. First pass runs
-  // WITHOUT a teacher decision — the loop stops at the Teacher Decision Gate
-  // by design (proposal stays PENDING). Loop failure NEVER fails the job
-  // (evidence is canonical) — the loop is idempotently resumable with the
-  // same evidence rows (R-027-05 restored-identity semantics).
   try {
     const { tenantId, studentId } = job.data;
     if (tenantId && studentId) {

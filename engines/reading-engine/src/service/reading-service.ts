@@ -154,6 +154,10 @@ export async function enqueueAnalysis(ctx: ReadingContext, input: AnalyzeInput) 
     tenantId,
     ...(input.executionAttemptId ? { executionAttemptId: input.executionAttemptId } : {}),
   });
+  await db
+    .update(attempts)
+    .set({ jobId: String(job.id), jobStatus: "queued", correlationId })
+    .where(eq(attempts.id, attemptRow.id));
   logger.info({ jobId: job.id, attemptId: attemptRow.id }, "Analysis job queued via REST");
   return { jobId: String(job.id), attemptId: attemptRow.id };
 }
