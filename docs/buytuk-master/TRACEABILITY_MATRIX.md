@@ -1,203 +1,34 @@
-# TRACEABILITY_MATRIX — Buytuk Academy
-## مصفوفة التتبع | ربط المتطلبات بالكود والاختبارات
+# TRACEABILITY MATRIX — BuyTuk Academy
 
----
+## Purpose
+This matrix links the document baseline to decisions, implementation evidence, test evidence, gate state, and closeout state.
+Only repository evidence visible in the inspected codebase is marked as verified.
+Anything not proven from code/docs/tests in-repo is marked `NOT VERIFIED`.
 
-```
-الإصدار : 1.0.0
-التاريخ  : 2026-07-18
-الغرض   : إذا تغيّر متطلب واحد — تعرف فوراً ما الملفات التي يجب تعديلها
-القانون : أي متطلب جديد يُضاف هنا قبل الكود
-```
-
-> **"الكود الذي لا يُتتبَّع إلى متطلب — كود بلا سبب."**
-
----
-
-## كيف تقرأ هذا الملف
-
-```
-REQ-ID  : رقم المتطلب الفريد
-الوصف   : ما الذي يجب أن يحدث؟
-الفئة   : Functional | Non-Functional | Security | Business
-المحرك  : أي Intelligence Engine مرتبط؟
-API     : الـ Endpoint المرتبط
-DB      : الجدول أو الجداول المرتبطة
-Frontend: الملفات أو المكونات في school-platform
-Backend : الملفات في api-server
-Tests   : معرفات الاختبارات المرتبطة
-الحالة  : ✅ مكتمل | ⏳ قيد التطوير | ❌ غير مبدوء | 🔄 يحتاج مراجعة
-```
-
----
-
-## قسم 1: متطلبات المصادقة والصلاحيات (AUTH)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| AUTH-001 | تسجيل دخول بالبريد وكلمة المرور | POST /api/auth/login | users | AuthScreen.tsx | auth.routes.ts | E2E-01 | ⏳ |
-| AUTH-002 | إصدار JWT Access + Refresh Token | POST /api/auth/login | — | AuthScreen.tsx | auth.routes.ts | INT-AUTH-001 | ⏳ |
-| AUTH-003 | تجديد Token تلقائياً | POST /api/auth/refresh | — | api-client | auth.routes.ts | INT-AUTH-002 | ❌ |
-| AUTH-004 | تسجيل خروج وإلغاء Token | POST /api/auth/logout | — | AuthScreen.tsx | auth.routes.ts | INT-AUTH-003 | ❌ |
-| AUTH-005 | معلم لا يصل لبيانات مدرسة أخرى | كل endpoint | tenant_id | — | rbac.middleware.ts | INT-RBAC-001 | ⏳ |
-| AUTH-006 | ولي الأمر يرى بيانات ابنه فقط | GET /api/users/:id | parent_id | ParentPortal.tsx | rbac.middleware.ts | INT-RBAC-002 | ⏳ |
-
----
-
-## قسم 2: متطلبات محرك القراءة (READING)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| READ-001 | تسجيل جلسة قراءة (3 معايير) | POST /api/reading-sessions | reading_sessions | TeacherReadingPanel.tsx | reading.routes.ts | E2E-01, INT-READ-001 | ⏳ |
-| READ-002 | حساب overall_score = avg(3 معايير) | — | — | — | readingCalculator.ts | UNIT-READ-001 | ✅ |
-| READ-003 | تصنيف الأداء تلقائياً | — | — | — | readingCalculator.ts | UNIT-READ-002 | ✅ |
-| READ-004 | عرض سجل جلسات طالب | GET /api/reading-sessions/student/:id | reading_sessions | StudentReadingPanel.tsx | reading.routes.ts | INT-READ-002 | ⏳ |
-| READ-005 | تحليل AI للجلسة (اختياري) | POST /api/ai/analyze | — | TeacherReadingPanel.tsx | ai.routes.ts | INT-AI-001 | ⏳ |
-
----
-
-## قسم 3: متطلبات محرك الإملاء (DICTATION)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| DICT-001 | تسجيل جلسة إملاء | POST /api/dictation-sessions | dictation_sessions | TeacherDictationPanel.tsx | dictation.routes.ts | INT-DICT-001 | ⏳ |
-| DICT-002 | حساب overall_score = avg(spelling, listening) | — | — | — | dictationCalculator.ts | UNIT-DICT-001 | ✅ |
-| DICT-003 | عرض سجل الطالب | GET /api/dictation-sessions/student/:id | dictation_sessions | StudentDictationPanel.tsx | dictation.routes.ts | INT-DICT-002 | ⏳ |
-
----
-
-## قسم 4: متطلبات محرك الكتابة (WRITING)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| WRIT-001 | تسجيل جلسة كتابة (4 معايير) | POST /api/writing-sessions | writing_sessions | TeacherWritingPanel.tsx | writing.routes.ts | INT-WRIT-001 | ⏳ |
-| WRIT-002 | حساب overall_score = avg(4 معايير) | — | — | — | writingCalculator.ts | UNIT-WRIT-001 | ✅ |
-| WRIT-003 | عرض سجل الطالب | GET /api/writing-sessions/student/:id | writing_sessions | StudentWritingPanel.tsx | writing.routes.ts | INT-WRIT-002 | ⏳ |
-
----
-
-## قسم 5: متطلبات محرك النطق (PRONUNCIATION)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| PRON-001 | تسجيل جلسة نطق (3 معايير) | POST /api/pronunciation-sessions | pronunciation_sessions | TeacherPronunciationPanel.tsx | pronunciation.routes.ts | INT-PRON-001 | ⏳ |
-| PRON-002 | حساب overall_score = avg(clarity, fluency, intonation) | — | — | — | pronunciationCalculator.ts | UNIT-PRON-001 | ✅ |
-| PRON-003 | عرض سجل الطالب | GET /api/pronunciation-sessions/student/:id | pronunciation_sessions | StudentPronunciationPanel.tsx | pronunciation.routes.ts | INT-PRON-002 | ⏳ |
-
----
-
-## قسم 6: متطلبات محرك الطلاقة والتفكير (FLUENCY)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| FLUE-001 | تسجيل جلسة طلاقة وتفكير (3 معايير) | POST /api/fluency-thinking-sessions | fluency_thinking_sessions | TeacherFluencyThinkingPanel.tsx | fluencyThinking.routes.ts | INT-FLUE-001 | ⏳ |
-| FLUE-002 | حساب overall_score = avg(expression, coherence, depth) | — | — | — | fluencyThinkingCalculator.ts | UNIT-FLUE-001 | ✅ |
-| FLUE-003 | عرض سجل الطالب | GET /api/fluency-thinking-sessions/student/:id | fluency_thinking_sessions | StudentFluencyThinkingPanel.tsx | fluencyThinking.routes.ts | INT-FLUE-002 | ⏳ |
-
----
-
-## قسم 7: متطلبات محرك سلوك التعلم (LEARNING BEHAVIOR)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| LBEH-001 | تسجيل جلسة سلوك التعلم | POST /api/learning-behavior-sessions | learning_behavior_sessions | TeacherLearningBehaviorPanel.tsx | learningBehavior.routes.ts | INT-LBEH-001 | ⏳ |
-| LBEH-002 | حساب overall_score = avg(participation, focus, consistency) | — | — | — | learningBehaviorCalculator.ts | UNIT-LBEH-001 | ✅ |
-| LBEH-003 | عرض سجل الطالب | GET /api/learning-behavior-sessions/student/:id | learning_behavior_sessions | StudentLearningBehaviorPanel.tsx | learningBehavior.routes.ts | INT-LBEH-002 | ⏳ |
-
----
-
-## قسم 8: متطلبات طبقة الإتقان (MASTERY)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| MAST-001 | حساب MasteryRecord بعد كل جلسة | تلقائي | mastery_records | TeacherMasteryPanel.tsx | mastery.routes.ts | UNIT-MAST-001 | ✅ |
-| MAST-002 | عرض تاريخ الإتقان للطالب | GET /api/mastery/student/:id | mastery_records | StudentMasteryPanel.tsx | mastery.routes.ts | INT-MAST-001 | ⏳ |
-| MAST-003 | مقارنة الإتقان عبر الزمن | GET /api/mastery/student/:id/history | mastery_records | TeacherMasteryPanel.tsx | mastery.routes.ts | INT-MAST-002 | ❌ |
-
----
-
-## قسم 9: متطلبات التشخيص (DIAGNOSTICS)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| DIAG-001 | اكتشاف فجوة تلقائياً عند جلستين < 60 | تلقائي | learning_gaps | TeacherDiagnosticsPanel.tsx | diagnostics.routes.ts | UNIT-DIAG-001 | ✅ |
-| DIAG-002 | اكتشاف فجوة حرجة فورياً عند < 30 | تلقائي | learning_gaps | TeacherDiagnosticsPanel.tsx | diagnostics.routes.ts | UNIT-DIAG-002 | ✅ |
-| DIAG-003 | تصنيف شدة الفجوة (Critical/Moderate/Minor) | تلقائي | learning_gaps | TeacherDiagnosticsPanel.tsx | diagnostics.routes.ts | UNIT-DIAG-003 | ✅ |
-| DIAG-004 | عرض الفجوات النشطة للطالب | GET /api/diagnostics/student/:id | learning_gaps | TeacherDiagnosticsPanel.tsx | diagnostics.routes.ts | INT-DIAG-001 | ⏳ |
-| DIAG-005 | تنبيه المعلم بالفجوة الجديدة | Notification | — | TeacherPortal.tsx | — | — | ❌ |
-
----
-
-## قسم 10: متطلبات العلاج (REMEDIATION)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| REMED-001 | اقتراح بروتوكول علاج مناسب | POST /api/remediation/assign | remediation_assignments | TeacherRemediationPanel.tsx | remediation.routes.ts | UNIT-REMED-001 | ✅ |
-| REMED-002 | موافقة المعلم على العلاج قبل تطبيقه | POST /api/remediation/assign | remediation_assignments | TeacherRemediationPanel.tsx | remediation.routes.ts | INT-REMED-001 | ⏳ |
-| REMED-003 | تتبع تقدم الطالب في خطة العلاج | PATCH /api/remediation/:id/progress | remediation_assignments | TeacherRemediationPanel.tsx | remediation.routes.ts | INT-REMED-002 | ⏳ |
-| REMED-004 | إغلاق الفجوة بعد اكتمال العلاج | PATCH /api/diagnostics/gaps/:id | learning_gaps | TeacherRemediationPanel.tsx | remediation.routes.ts | INT-REMED-003 | ⏳ |
-
----
-
-## قسم 11: متطلبات قياس الأثر (IMPACT)
-
-| REQ-ID | الوصف | API | DB | Frontend | Backend | Tests | الحالة |
-|--------|-------|-----|-----|---------|---------|-------|--------|
-| IMP-001 | حساب Before/After Score تلقائياً | تلقائي عند إغلاق العلاج | impact_measurements | TeacherImpactPanel.tsx | impact.routes.ts | UNIT-IMP-001 | ✅ |
-| IMP-002 | تصنيف الأثر (Significant/Moderate/Minimal) | تلقائي | impact_measurements | TeacherImpactPanel.tsx | impact.routes.ts | UNIT-IMP-002 | ✅ |
-| IMP-003 | تقرير جودة المدرسة | GET /api/impact/school/:id | impact_measurements | PrincipalImpactReport.tsx | impact.routes.ts | INT-IMP-001 | ⏳ |
-
----
-
-## قسم 12: متطلبات غير وظيفية (NON-FUNCTIONAL)
-
-| REQ-ID | الوصف | الملف المرجعي | الهدف | Tests | الحالة |
-|--------|-------|--------------|-------|-------|--------|
-| PERF-001 | API response < 200ms (p95) | QUALITY_ATTRIBUTES.md | < 200ms | PERF-TEST-001 | ❌ |
-| PERF-002 | Page load < 3 ثوانٍ | QUALITY_ATTRIBUTES.md | < 3s | PERF-TEST-002 | ❌ |
-| SEC-001 | HTTPS إلزامي في الإنتاج | QUALITY_ATTRIBUTES.md | — | SEC-TEST-001 | ❌ |
-| SEC-002 | Rate limiting على جميع الـ Endpoints | QUALITY_ATTRIBUTES.md | 100 req/min | INT-SEC-001 | ❌ |
-| SEC-003 | لا PII في الـ Logs | QUALITY_ATTRIBUTES.md | — | لا آلي | ❌ |
-| AVAIL-001 | Uptime ≥ 99% | QUALITY_ATTRIBUTES.md | 99% | MONITOR-001 | ❌ |
-| PRIV-001 | Tenant isolation كامل | QUALITY_ATTRIBUTES.md | 0 cross-tenant | INT-RBAC-001 | ⏳ |
-
----
-
-## ملخص الحالة الحالية
-
-```
-إجمالي المتطلبات : 51
-✅ مكتمل         : 12 (Unit Tests تعمل — منطق الحساب)
-⏳ قيد التطوير   : 27 (يحتاج توصيل قاعدة البيانات أولاً)
-❌ غير مبدوء     : 12 (متطلبات لاحقة)
-
-الانتباه الفوري:
-← AUTH-001 + AUTH-002 (تسجيل الدخول) يفتح الباب لكل ⏳
-← إصلاح TD-001 + TD-002 يُحوِّل ⏳ → ✅
-```
-
----
-
-## إجراءات الصيانة
-
-```
-عند إضافة متطلب جديد:
-1. أضف سطراً في الجدول المناسب
-2. حدد الملفات المرتبطة قبل كتابة الكود
-3. اكتب معرف الاختبار المخطط
-
-عند تغيير متطلب موجود:
-1. ابحث عن REQ-ID في الجدول
-2. افتح جميع الملفات المرتبطة
-3. عدّل وتحقق
-4. حدّث الحالة
-
-عند حذف متطلب:
-1. لا تحذف السطر — علّم عليه بـ ~~strikethrough~~
-2. اشرح السبب في الملاحظات
-3. ابحث عن الكود المرتبط وقرر إبقاءه أو حذفه
-```
-
----
-
-*"أي كود لا يُتتبَّع إلى متطلب — اسأل: لماذا يوجد؟"*
+| Req ID | Requirement / Source | Class | ADR / Decision | Implementation evidence in repo | Test evidence in repo | Gate | Closeout | Status |
+|---|---|---|---|---|---|---|---|---|
+| GOV-001 | Mandatory execution protocol exists in-repo | B | N/A | `docs/reference/MANDATORY_EXECUTION_PROTOCOL.md` | N/A | PHASE-0 governance review | `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md` | VERIFIED |
+| GOV-002 | Immutable reference requirement doc exists in-repo (`BUY-TUK-ACADEMY-V1.0.0.md`) | A | N/A | `docs/reference/BUY-TUK-ACADEMY-V1.0.0.md` | N/A | PHASE-0 governance review | `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md` | VERIFIED |
+| GOV-003 | Compliance / traceability mapping exists in-repo | B | N/A | `docs/buytuk-master/TRACEABILITY_MATRIX.md` | N/A | PHASE-0 governance review | `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md` | VERIFIED |
+| GOV-004 | Execution roadmap exists and is dependency-ordered | B | N/A | `docs/buytuk-master/MASTER_ROADMAP.md` | N/A | PHASE-0 governance review | `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md` | VERIFIED |
+| GOV-005 | Stage status register exists and uses allowed statuses only | B | N/A | `docs/buytuk-master/STAGE_STATUS.md` | N/A | PHASE-0 governance review | `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md` | VERIFIED |
+| GOV-006 | Change / deviation record exists in-repo | B | Candidate evidence: `docs/decisions/*` and governance register | `docs/buytuk-master/CHANGE_DEVIATION_RECORD.md` | N/A | PHASE-0 governance review | `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md` | VERIFIED |
+| ARCH-001 | Frontend architecture = Next.js 14 portals | A (§3.1, §6) | NOT VERIFIED | Repo inspection in this turn found no `next`, `next.config`, or Next.js imports in `package.json/apps/packages/engines` | NOT VERIFIED | Future stage gate | NOT VERIFIED | NOT VERIFIED |
+| ARCH-002 | Backend gateway = NestJS 10 | A (§3.1, §6) | NOT VERIFIED | Repo inspection in this turn found no `@nestjs` or `NestFactory`; current gateway evidence is Express in `apps/api/src/app.ts` and `apps/api/src/index.ts` | NOT VERIFIED | Future stage gate | NOT VERIFIED | NOT VERIFIED |
+| ARCH-003 | Monorepo workspace exists | A (§5, §6) | Existing workspace structure | `package.json`, `pnpm-workspace.yaml` | Root build currently fails; targeted TS checks pass for some packages | Build gate pending | NOT VERIFIED | PARTIAL |
+| AUTH-001 | Five roles + JWT auth + RBAC | A (§5.1.1) | Existing security design in repo decisions | `packages/security/src/rbac.ts`, `packages/security/src/tokens.ts`, `apps/api/src/middleware/auth.ts`, `apps/api/src/v1/auth.ts`, `packages/database/src/schema/users.ts` | No single end-to-end all-roles test verified in this turn | Auth gate pending | NOT VERIFIED | PARTIAL |
+| SEC-001 | Row Level Security (RLS) in database | A (§5.1.1, §9.1.1) | NOT VERIFIED | RLS SQL/policies found in docs only; no verified implementation file such as `packages/security/src/rls.ts` or DB policy migrations was proven in-repo | NOT VERIFIED | Security gate pending | NOT VERIFIED | NOT VERIFIED |
+| READ-001 | Reading upload / submit / analysis queue path | A (§5 learning flow) | Candidate decision evidence: `docs/decisions/ADR-027-V3-RUNTIME-INTEGRATION.md` | `apps/api/src/routes/reading.ts`, `engines/reading-engine/src/service/reading-service.ts`, `engines/reading-engine/src/security/s3-client.ts`, `packages/database/src/schema/reading.ts` | `tests/core-32/p2-voice-ui-upload.e2e.test.ts`, `engines/reading-engine/src/service/__tests__/core02-tenant-uuid.test.ts` | Targeted runtime gate passed; root build gate still pending | Prior runtime reports exist in `docs/reports/` and current governance closeout references them | VERIFIED (targeted path) |
+| READ-002 | `jobId` persisted to reading attempt row | B | Current local implementation update | `engines/reading-engine/src/service/reading-service.ts` | `engines/reading-engine/src/service/__tests__/core02-tenant-uuid.test.ts` | Targeted test gate passed | NOT VERIFIED as separate historical closeout | VERIFIED |
+| STU-001 | Student dashboard / reports / recommendations path | A (§5.1.2) | Existing student-runtime decisions NOT VERIFIED | `apps/api/src/v1/students.ts`, `packages/database/src/reading/mastery-read.ts` | No dedicated dashboard E2E verified in this turn | Product gate pending | NOT VERIFIED | PARTIAL |
+| TCH-001 | Teacher portal capabilities including review queue and reports | A (§5.1.3) | Existing teacher-runtime decisions NOT VERIFIED | `apps/api/src/v1/teacher.ts`, `apps/api/src/v1/oversight.ts` | No teacher portal UI E2E verified in this turn | Product gate pending | NOT VERIFIED | PARTIAL |
+| PAR-001 | Parent portal | A (§5.1.4) | NOT VERIFIED | No verified parent UI implementation surfaced in this turn | NOT VERIFIED | Future stage gate | NOT VERIFIED | NOT VERIFIED |
+| ADM-001 | Principal / admin portals | A (§5.1.5) | PARTIAL decision evidence in `apps/api/src/v1/oversight.ts` | Oversight/admin API evidence exists; full portal UI evidence not verified | NOT VERIFIED | Future stage gate | NOT VERIFIED | PARTIAL |
+| GAM-001 | Wallet / points / badges / leveling / store | A (§5.2.3) | NOT VERIFIED | No verified runtime module proved in this turn | NOT VERIFIED | Future stage gate | NOT VERIFIED | NOT VERIFIED |
+| MSG-001 | Messages / notes / notifications | A (§4.2.1, §5.2.4) | NOT VERIFIED | Partial textual signals exist in spec/openapi/docs, but no full verified runtime module was proven in this turn | NOT VERIFIED | Future stage gate | NOT VERIFIED | NOT VERIFIED |
+| ATT-001 | Attendance | A (§4.2.1, §5.1.3) | NOT VERIFIED | No verified attendance runtime implementation proved in this turn | NOT VERIFIED | Future stage gate | NOT VERIFIED | NOT VERIFIED |
+| ENG-001 | Assessment engine surfaced end-to-end | A (§4.2.2, §5.2.2) | NOT VERIFIED | Engine files exist under `engines/assessment-engine/src/*` | Engine unit tests exist in repo (`engines/assessment-engine/src/__tests__/core-16.test.ts`), but were not executed in this turn | Future stage gate | NOT VERIFIED | PARTIAL |
+| ENG-002 | Dictation engine surfaced end-to-end | A (§4.2.2, §5.2.2) | NOT VERIFIED | Engine files exist under `engines/dictation-engine/src/*` | Engine unit tests exist in repo (`engines/dictation-engine/src/__tests__/core-14.test.ts`), but were not executed in this turn | Future stage gate | NOT VERIFIED | PARTIAL |
+| AI-001 | Inference gateway (Python + gRPC) | A (§3.1, §6) | Existing reading-engine inference materials | `engines/reading-engine/inference-gateway/*`, `INFERENCE_GATEWAY_URL` config references | No integrated gateway runtime proof executed in this turn | Future stage gate | NOT VERIFIED | PARTIAL |
+| TEST-001 | Quality gate coverage 85%+ and full test matrix | C (§2.3, §10.1, §10.3) | NOT VERIFIED | Test folders and strategies exist in repo | This turn verified only: `packages/config/test/config.test.ts` (15), `engines/reading-engine/src/service/__tests__/core02-tenant-uuid.test.ts` (8), `tests/core-32/p2-voice-ui-upload.e2e.test.ts` (1) | Quality gate pending | NOT VERIFIED | NOT VERIFIED |
+| DEP-001 | Production readiness: Docker/K8s/HPA/CI/CD | C (§8, §9) | NOT VERIFIED | Partial evidence: `engines/reading-engine/inference-gateway/Dockerfile`, `docker-compose.workers.yml`; no complete platform deployment proof verified in this turn | NOT VERIFIED | Production gate pending | NOT VERIFIED | NOT VERIFIED |
