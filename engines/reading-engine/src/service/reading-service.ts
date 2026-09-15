@@ -86,10 +86,10 @@ export async function metricsText(): Promise<string> {
 }
 
 export async function listPassages(
-  _ctx: ReadingContext,
+  ctx: ReadingContext,
   opts: { classroomId?: string; grade?: string; limit?: number; offset?: number },
 ) {
-  const conditions: any[] = [];
+  const conditions: any[] = [eq(passages.tenantId, requireTenant(ctx))];
   if (opts.classroomId) conditions.push(eq(passages.classroomId, opts.classroomId));
   if (opts.grade) conditions.push(eq(passages.grade, opts.grade));
   const limit = Math.min(opts.limit ?? 50, 100);
@@ -116,22 +116,30 @@ export async function createPassage(ctx: ReadingContext, input: PassageInput) {
   return row;
 }
 
-export async function getPassage(id: string) {
-  const [row] = await db.select().from(passages).where(eq(passages.id, id)).limit(1);
+export async function getPassage(id: string, tenantId?: string) {
+  const [row] = await db
+    .select()
+    .from(passages)
+    .where(tenantId ? and(eq(passages.id, id), eq(passages.tenantId, tenantId)) : eq(passages.id, id))
+    .limit(1);
   return row ?? null;
 }
 
-export async function listSessionsByStudent(studentId: string) {
+export async function listSessionsByStudent(studentId: string, tenantId?: string) {
   return db
     .select()
     .from(sessions)
-    .where(eq(sessions.studentId, studentId))
+    .where(tenantId ? and(eq(sessions.studentId, studentId), eq(sessions.tenantId, tenantId)) : eq(sessions.studentId, studentId))
     .orderBy(desc(sessions.createdAt))
     .limit(100);
 }
 
-export async function getAttempt(id: string) {
-  const [row] = await db.select().from(attempts).where(eq(attempts.id, id)).limit(1);
+export async function getAttempt(id: string, tenantId?: string) {
+  const [row] = await db
+    .select()
+    .from(attempts)
+    .where(tenantId ? and(eq(attempts.id, id), eq(attempts.tenantId, tenantId)) : eq(attempts.id, id))
+    .limit(1);
   return row ?? null;
 }
 

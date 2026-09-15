@@ -95,7 +95,7 @@ router.post(
 );
 
 router.get("/passages/:id", authenticate, async (req: Request, res: Response) => {
-  const row = await getPassage(String(req.params.id));
+  const row = await getPassage(String(req.params.id), ctxOf(req).tenantId);
   if (!row) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
@@ -105,11 +105,11 @@ router.get("/passages/:id", authenticate, async (req: Request, res: Response) =>
 
 // Sessions & attempts
 router.get("/sessions/student/:studentId", authenticate, async (req: Request, res: Response) => {
-  res.json(await listSessionsByStudent(String(req.params.studentId)));
+  res.json(await listSessionsByStudent(String(req.params.studentId), ctxOf(req).tenantId));
 });
 
 router.get("/attempts/:id", authenticate, async (req: Request, res: Response) => {
-  const row = await getAttempt(String(req.params.id));
+  const row = await getAttempt(String(req.params.id), ctxOf(req).tenantId);
   if (!row) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;

@@ -5,6 +5,7 @@
  * Legacy engine reading schema is reachable via the transitional engine shim.
  */
 export * from "./client.js";
+export { withTenant, isValidTenantId, TenantContextError } from "./tenancy.js";
 export * from "./schema/index.js";
 export { recordEvidence } from "./evidence/evidence-writer.js";
 export type { RecordEvidenceInput } from "./evidence/evidence-writer.js";

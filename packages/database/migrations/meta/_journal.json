@@ -43,6 +43,13 @@
       "when": 1789122508257,
       "tag": "0005_core24_activity_assignment_attempt_state",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789471651997,
+      "tag": "0007_phase2_rls_tenancy",
+      "breakpoints": true
     }
   ]
 }
