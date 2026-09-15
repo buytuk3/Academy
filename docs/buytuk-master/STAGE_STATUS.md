@@ -11,7 +11,7 @@
 | Stage ID | Title | Status | Basis / evidence | Notes |
 |---|---|---|---|---|
 | PHASE-0 | GOVERNANCE | CLOSED / PASS | Governance document set exists in `docs/`; closeout written in `docs/reports/PHASE-0-GOVERNANCE-CLOSEOUT-2026-09-15.md`; git evidence captured in local clone | Closed in this turn based on documentation and evidence capture only |
-| PHASE-1 | FIX-BUILD-TS6307 | NOT STARTED | Verified root build currently fails with `TS6307` in local evidence | Proposed next stage; not opened in this turn |
+| PHASE-1 | FIX-BUILD-TS6307 | CLOSED / PASS | `pnpm run build` = exit 0 after fix (16 TS6307 → 0); affected tests pass (config 15, database 55, reading-engine 16, api 4, worker 1, core-32 p2-voice E2E 1); typechecks exit 0 for api/worker/reading-engine/config/security/observability; closeout: `docs/reports/PHASE-1-FIX-BUILD-TS6307-CLOSEOUT-2026-09-15.md` | Fixed via `packages/database/tsconfig.json` include of cross-package sources + `thread-stream` peer devDep in `apps/api` + `dist-types/` gitignore; deferred p1-student-ui E2E failures recorded in deviation register |
 | PHASE-2 | SECURITY-RLS-TENANCY | NOT STARTED | RLS requirement is documented; implementation proof not verified | Depends on PHASE-1 |
 | PHASE-3 | CORE-WEB-PORTAL-SHELL | NOT STARTED | No verified Next.js portal shell in current repo inspection | Depends on PHASE-1 |
 | PHASE-4 | API-GATEWAY-ALIGNMENT | NOT STARTED | Current backend evidence is Express; NestJS alignment not verified | Depends on PHASE-1 |

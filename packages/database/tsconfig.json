@@ -31,6 +31,9 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../config/src/**/*",
+    "../observability/src/**/*",
+    "../security/src/**/*"
   ]
 }

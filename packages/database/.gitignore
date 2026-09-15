@@ -4,3 +4,4 @@ coverage/
 *.log
 .env
 drizzle/.drizzle-schema/
+dist-types/
