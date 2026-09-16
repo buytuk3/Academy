@@ -1,7 +1,8 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
-const root = fileURLToPath(new URL("../../", import.meta.url));
+const root = fileURLToPath(new URL("../../", import.meta.url)); // repo root
 export default defineConfig({
+  root,
   resolve: {
     alias: {
       "@buytuk/contracts": `${root}packages/contracts/src/index.ts`,
@@ -11,5 +12,6 @@ export default defineConfig({
       "@workspace/queue": `${root}packages/queue/src/index.ts`,
     },
   },
-  test: { include: ["packages/observability/test/**/*.test.ts"] },
+  // PHASE-5: tests moved into src/__tests__ (package owns its contracts tests)
+  test: { include: ["packages/observability/src/**/*.test.ts"] },
 });
