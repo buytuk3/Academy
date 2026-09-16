@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { config } from "@workspace/config";
 import { createLogger, requestContext, httpLogger } from "@workspace/observability";
 import router from "./routes/index.js";
+import healthRouter from "./routes/health.js";
 import v1Router from "./v1/index.js";
 
 const app: Express = express();
@@ -50,6 +51,10 @@ const authRateLimiter = rateLimit({
 });
 app.use(["/api/auth", "/v1/auth"], authRateLimiter as any);
 
+// PHASE-4 (API-GATEWAY-ALIGNMENT): root liveness alias — GET /healthz is
+// documented at the root in lib/api-spec/openapi.yaml; same single handler
+// (HealthCheckResponse) as /api/healthz — no duplication, additive only.
+app.use("/", healthRouter);
 app.use("/api", router);
 app.use("/v1", v1Router);
 

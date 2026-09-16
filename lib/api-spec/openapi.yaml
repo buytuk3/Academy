@@ -33,6 +33,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthStatus'
+  /api/healthz:
+    get:
+      operationId: getApiHealthz
+      summary: Liveness probe (alias of root /healthz under the /api mount)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
   /api/metrics:
     get:
       operationId: getMetrics
@@ -349,6 +360,64 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
         '404':
           description: User not found
+  /api/auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      summary: Request a password reset token (the token may be echoed in development environments only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  resetToken:
+                    type: string
+                    description: Returned in development environments only
+  /api/auth/reset-password:
+    post:
+      operationId: resetPassword
+      summary: Consume a reset token and set a new password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resetToken, newPassword]
+              properties:
+                resetToken:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid or expired reset token
 components:
   securitySchemes:
     bearerAuth:
