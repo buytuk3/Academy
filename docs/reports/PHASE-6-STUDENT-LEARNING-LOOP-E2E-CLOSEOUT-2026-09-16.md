@@ -66,3 +66,14 @@ Honest runner notes (not gate failures, recorded per §8): a monolithic core-32 
 
 ## VERSION
 **BuyTuk Academy 1.10 = official** (adopted at this closeout, per D-4/D-5/D-12). 1.9 remains preserved as Last Known Good history. Wait state: **STOP — awaiting `START NEXT PHASE`.**
+
+## D-12 DELIVERY ADDENDUM (2026-09-16 — appended post-archive; supersedes the single-link note above)
+
+Platform limitation proven during verification: single-file serving truncates large files (the link above returns HTTP 200 but serves 336,162,462 of the 453,668,510 bytes; files ≤15 MiB serve fully).
+
+**Canonical D-12 delivery for 1.10 = verified 29-part channel:**
+- Parts: `buytuk-1.10.tar.gz.part-00 … part-28` (≤15 MiB each) + `parts.sha256` checksum file.
+- End-to-end proof (2026-09-16): every part downloaded from its live link and SHA-256-matched against `parts.sha256` (each part repaired/re-uploaded individually until its checksum matched); reassembly from the verified parts reproduced the **EXACT official size (453,668,510 B)** and the **EXACT official SHA-256 (`104b69cb09d75bfe672d1e7f196fdefb2ee1a7f01dd985c73d4c89b2433687dd`)**; `tar -tzf` exit 0.
+- Reassembly: `cat buytuk-1.10.tar.gz.part-00 … part-28 > buytuk-academy-COMPLETE-PROJECT-REFERENCE-POST-PHASE-6-2026-09-16.tar.gz` then `sha256sum` must print `104b69cb09d75bfe672d1e7f196fdefb2ee1a7f01dd985c73d4c89b2433687dd`.
+- Authoritative part links + delivery register: `MANIFEST-PHASE6-COMPLETE-REFERENCE.md` + `SIDECAR-PHASE6-COMPLETE-REFERENCE.txt`.
+- Note: the copy of this report inside the 1.10 archive was captured at the phase commit (`812539e…`) before this delivery discovery — same pattern as the 1.9 precedent (archive built at the phase commit; registry/delivery finalized in the close commits). The delivery register above is the canonical download record. The archive itself is untouched (D-9).
