@@ -74,7 +74,7 @@ const PORTAL_CAP_TITLES = {
 };
 const PORTAL_CAP_PHASE = {
   student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", messages: "PHASE-11", notes: "PHASE-11", wallet: "PHASE-11", "points-store": "PHASE-11", support: "PHASE-11" },
-  teacher: { passages: "PHASE-7", lessons: "PHASE-7", students: "PHASE-7", classes: "PHASE-7", reports: "PHASE-7", exercises: "PHASE-7", analytics: "PHASE-7", schedule: "PHASE-7", attendance: "PHASE-11", ratings: "PHASE-7", "voice-qa": "PHASE-7", settings: "PHASE-7" },
+  teacher: { students: "PHASE-7", reports: "PHASE-7", passages: "PHASE-10", lessons: "PHASE-10", exercises: "PHASE-10", "voice-qa": "PHASE-10", ratings: "PHASE-10", analytics: "PHASE-10", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-9", settings: "PHASE-9" },
   parent: { children: "PHASE-8", progress: "PHASE-8", reports: "PHASE-8", communication: "PHASE-8" },
   principal: { teachers: "PHASE-9", students: "PHASE-9", classes: "PHASE-9", analytics: "PHASE-9", reports: "PHASE-9" },
   admin: { users: "PHASE-9", queue: "PHASE-9", audit: "PHASE-9", models: "PHASE-9", settings: "PHASE-9" },
@@ -446,6 +446,10 @@ function openPortalCapability(cap) {
     renderDashboard();
     return;
   }
+  if (role === "teacher" && (cap === "students" || cap === "reports")) {
+    renderTeacherReports();
+    return;
+  }
   renderPortalPlaceholder(role, cap);
 }
 
@@ -465,9 +469,59 @@ async function renderStaffDashboard(role) {
     return;
   }
   const pending = Array.isArray(r.json?.pendingProposals) ? r.json.pendingProposals : [];
-  $("portal-capability-panel").innerHTML = `
+  const reviewItems = Array.isArray(r.json?.reviewItems) ? r.json.reviewItems : [];
+  const panel = $("portal-capability-panel");
+  const list = pending.map((p) => `
+    <div class="item">🧩 <b>${esc(p.skill)}</b> · ${esc(p.activityType)} <span class="badge">${esc(p.status)}</span>
+      <div class="muted small">طالب: <code>${esc(p.studentId)}</code> · ${esc(String(p.createdAt ?? ""))}</div>
+      <button class="link" type="button" data-report-student="${esc(p.studentId)}">عرض تقرير الطالب</button></div>`).join("");
+  const insights = reviewItems.map((it) => `<div class="item">💡 ${esc(it.title ?? it.skill ?? "")}<div class="muted small">${esc(it.reason ?? it.detail ?? "")}</div></div>`).join("");
+  panel.innerHTML = `
     <div class="stat"><span class="muted small">المقترحات المعلقة (حقيقية من /v1/teacher/review-queue)</span><b>${pending.length}</b></div>
-    <div class="muted small">قدرات الفريق التفصيلية (مراجعة/تقارير/تحليلات) تُبنى في المراحل اللاحقة وفق خارطة الطريق — لا بيانات وهمية هنا.</div>`;
+    ${(pending.length + reviewItems.length) === 0 ? `<div class="muted small">لا مقترحات معلقة حاليًا — قائمة حقيقية من API (لا بيانات وهمية).</div>` : `${list}${insights}`}
+    <div class="muted small">التقارير: افتح تقرير أي طالب من القائمة أعلاه — بيانات حقيقية بصلاحية المعلم (PHASE-7).</div>`;
+  panel.querySelectorAll("[data-report-student]").forEach((b) =>
+    b.addEventListener("click", () => renderTeacherReport(b.dataset.reportStudent)));
+}
+
+function renderTeacherReports() {
+  renderStaffDashboard(currentRole());
+}
+
+async function renderTeacherReport(studentId) {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  $("portal-meta").textContent = `تقرير طالب — حقيقي عبر صلاحية المعلم (PHASE-7) · ${studentId}`;
+  show("view-portal-home");
+  const panel = $("portal-capability-panel");
+  panel.innerHTML = `<div class="muted small">جارٍ تحميل التقرير الحقيقي…</div>`;
+  const r = await api("GET", `/v1/students/${studentId}/dashboard`);
+  if (r.status === 401 && (await refreshIfPossible())) return renderTeacherReport(studentId);
+  if (r.status === 403) {
+    panel.innerHTML = `<div class="error">403 — غير مصرح: الحماية الحقيقية من الـ API وليس من الواجهة.</div>`;
+    return;
+  }
+  if (r.status === 404) {
+    panel.innerHTML = `<div class="error">404 — الطالب غير موجود في نطاق مستأجرك (عزل المستأجر الحقيقي من PHASE-2).</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    panel.innerHTML = `<div class="error">تعذر تحميل التقرير (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+    return;
+  }
+  const d = r.json;
+  const mastery = (d.mastery ?? []).map((m) => `<div class="item">🏅 <b>${esc(m.subject ?? m.skill ?? "")}</b> — ${esc(m.level)} · درجة ${esc(m.score ?? "—")}</div>`).join("");
+  const recs = (d.recommendations ?? []).map((x) => `<div class="item">🔁 ${esc(x.proposedActivityType)} · ${esc(x.currentSkill)} → ${esc(x.targetSkill)}</div>`).join("");
+  panel.innerHTML = `
+    <div class="stat"><span class="muted small">أدلة مسجلة (حقيقية)</span><b>${d.progress?.evidenceCount ?? 0}</b></div>
+    <div class="stat"><span class="muted small">نقاط قوة</span><b>${d.strengths?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">نقاط ضعف</span><b>${d.weaknesses?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">فجوات</span><b>${d.gaps?.length ?? 0}</b></div>
+    ${(d.mastery ?? []).length === 0 ? `<div class="muted small">لا سجلات إتقان بعد (بيانات حقيقية — لا وهمية).</div>` : mastery}
+    ${recs || `<div class="muted small">لا توصيات حاليًا.</div>`}
+    <div class="muted small">التوصية التالية: ${d.nextActivity ? `${esc(d.nextActivity.proposedActivityType)} — ${esc(d.nextActivity.currentSkill)} → ${esc(d.nextActivity.targetSkill)}` : "لا توصية تالية بعد"}</div>
+    <button class="link" type="button" id="teacher-report-back">← عودة إلى قائمة المراجعة</button>`;
+  $("teacher-report-back").addEventListener("click", () => renderStaffDashboard(role));
 }
 
 function renderPortalPlaceholder(role, cap) {
