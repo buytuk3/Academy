@@ -24,3 +24,6 @@
 | PHASE-11 | GAMIFICATION-MESSAGING-ATTENDANCE | NOT STARTED | Feature proof not verified | Depends on PHASE-6, PHASE-7, PHASE-8 |
 | PHASE-12 | PRODUCTION-PERFORMANCE-OBSERVABILITY | NOT STARTED | Root build, deployment, perf, and coverage gates are not yet closed | Depends on core prior stages |
 | PHASE-13+ | APPROVED ENHANCEMENTS | NOT STARTED | Allowed only after baseline platform gates stabilize | Dependency-specific |
+
+## Standing governance rules (cross-reference)
+- **ADR-028 — Complete Project Reference & Version Governance (2026-09-16, binding):** every closed phase requires a verified full reference archive before final completion; sequential versions (**BuyTuk Academy 1.7 = current Last Known Good → 1.8 at the next closeout**); Phase ≠ Version; version frozen during work; no approval by memory (every phase starts from the last approved reference); archives immutable (SHA-256 + `tar -tzf` exit 0 mandatory). See `docs/decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md`.

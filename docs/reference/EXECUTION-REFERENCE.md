@@ -27,3 +27,11 @@ All implementation work in this repository must follow:
 - No unclassified enhancements
 - No marking a requirement as complete without evidence
 - No reopening closed work without regression evidence
+
+## Reference archive & version governance (ADR-028 — binding from 2026-09-16)
+- After every successfully closed phase, a verified **Complete Project Reference Archive** (full post-phase snapshot, not only changed files) is MANDATORY — a phase is not finally complete without it.
+- Versions run sequentially (**BuyTuk Academy 1.7 → 1.8 → 1.9 → …**): no reuse of a previous number, no undocumented jumps; **Phase ≠ Version**; the version is frozen during work and adopted only at CLOSE + valid archive.
+- **No approval by memory:** every new phase starts from the last approved Complete Project Reference and verifies Git HEAD, project version, stage status, previous close records, open deviations, traceability, ADRs, and current tests — before READ begins.
+- On context loss / engineer change / conflicting information, the last approved reference is the operational source of truth — state is never invented from memory.
+- Archives are immutable: never overwritten, deleted, identity-losing renamed, or replaced; each keeps its SHA-256. Mandatory proof per archive: `sha256sum` + `tar -tzf ARCHIVE >/dev/null` = exit 0.
+- Full rules and the canonical Version Chain Registry: [`docs/decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md`](../decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md).

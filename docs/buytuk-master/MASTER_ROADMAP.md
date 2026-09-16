@@ -7,6 +7,7 @@ It supersedes ad-hoc sequencing and must be read with:
 - `docs/reference/MANDATORY_EXECUTION_PROTOCOL.md`
 - `docs/buytuk-master/TRACEABILITY_MATRIX.md`
 - `docs/buytuk-master/STAGE_STATUS.md`
+- `docs/decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md` (Complete Project Reference & sequential version governance — every closed phase requires a verified full reference archive; BuyTuk Academy 1.7 is the current Last Known Good; binding from the next phase closeout)
 
 ## Ordering principle
 Execution order follows dependency risk, not document section numbering.
