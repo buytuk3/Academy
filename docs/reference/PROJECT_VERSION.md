@@ -2,7 +2,7 @@
 
 ## Current version governance (ADR-028 — binding from 2026-09-16)
 
-Sequential version system: **BuyTuk Academy 1.7 → 1.8 → 1.9 → 1.10 → …** (no reuse, no undocumented jumps). Phase ≠ Version (PHASE-4 may produce 1.8; never "PHASE-4 = version 4"). The version is frozen during work; the previous version stays Last Known Good until CLOSE + a valid Complete Project Reference, then the new version is adopted. Full rules: [`docs/decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md`](../decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md).
+Sequential version system: **BuyTuk Academy 1.7 → 1.8 → 1.9 → 1.10 → …** (no reuse, no undocumented jumps). Phase ≠ Version (PHASE-4 may produce 1.8; never "PHASE-4 = version 4"). The version is frozen during work; the previous version stays Last Known Good until CLOSE + a valid Complete Project Reference, then the new version is adopted. **Downloadable Official Release (D-12, owner adoption 2026-09-16): «الإصدار الرسمي لا يُعتبر Released/Official إلا بوجود Complete Project Reference Archive مستقل، قابل للتنزيل فعليًا، قابل للتحقق والاستخراج، وله SHA-256 مسجل»** — the downloadable verified archive is part of every phase's Definition of Done. Full rules: [`docs/decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md`](../decisions/ADR-028-REFERENCE-ARCHIVE-AND-VERSION-GOVERNANCE.md).
 
 ### Version chain registry (canonical)
 

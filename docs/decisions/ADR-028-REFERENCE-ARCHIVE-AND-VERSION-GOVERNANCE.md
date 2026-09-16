@@ -4,7 +4,7 @@
 > **Execution Protocol:** [`docs/reference/MANDATORY_EXECUTION_PROTOCOL.md`](../reference/MANDATORY_EXECUTION_PROTOCOL.md)
 > **Compliance Baseline:** [`docs/reference/DOCUMENT-V1-COMPLIANCE-AUDIT.md`](../reference/DOCUMENT-V1-COMPLIANCE-AUDIT.md)
 
-**Date:** 2026-09-16 · **Status:** APPROVED (owner executive ruling — binding governance, part of the Execution Reference) · **Amends:** `docs/reference/EXECUTION-REFERENCE.md`
+**Date:** 2026-09-16 · **Status:** APPROVED — **FORMALLY ADOPTED by owner (2026-09-16 adoption ruling: «consider this message the official adoption of ADR-028»)** — binding governance, part of the Execution Reference · **Amended:** 2026-09-16 — **D-12 added by the same owner adoption** (Downloadable Official Release) · **Amends:** `docs/reference/EXECUTION-REFERENCE.md`
 **Scope of this record:** governance documentation ONLY. No code changes, no V1 changes, no `_history/` changes, no tag changes, no archive re-creation, no version bump. PHASE-3 remains CLOSED / PASS (owner-adopted). PHASE-4 NOT STARTED.
 
 ## Context
@@ -47,6 +47,24 @@ A clear chain: "BuyTuk Academy 1.7" → 1.8 → 1.9 → 1.10 → … Each versio
 ### D-11 — Governance placement (Rule 11)
 This rule set is recorded as this ADR and cross-referenced in `EXECUTION-REFERENCE.md`, `MASTER_ROADMAP.md`, `STAGE_STATUS.md`, `CHANGE_DEVIATION_RECORD.md`, and `PROJECT_VERSION.md`. The original V1 document is NOT modified.
 
+### D-12 — Downloadable Official Release (owner adoption ruling, 2026-09-16)
+Binding clarification adopted by the owner: **«الإصدار الرسمي لا يُعتبر Released/Official إلا بوجود Complete Project Reference Archive مستقل، قابل للتنزيل فعليًا، قابل للتحقق والاستخراج، وله SHA-256 مسجل.»**
+
+- Existence in Git, or a version number recorded in governance files alone, does **NOT** make a version officially complete/released.
+- Every official version must be unambiguously bound to: **Project Version · Phase · Phase Close Record · HEAD/Commit · SHA-256 · a downloadable Complete Project Reference Archive · a passed archive integrity test**.
+- **Definition of Done for every future phase** — a phase may NOT be closed as CLOSED/PASS unless ALL of the following are done:
+  1. The phase is completed.
+  2. A Close Record is created.
+  3. A full Complete Project Reference Archive is created.
+  4. The archive is confirmed **downloadable** (delivered/uploaded with a working link recorded in the phase record).
+  5. The archive is verified intact and successfully extracted/read.
+  6. SHA-256 of the final file is computed.
+  7. Filename + SHA-256 + size + date + version + HEAD + phase + close commit are recorded in the governance registry.
+
+  Without the downloadable, verified archive → the phase is **NOT finally complete**.
+- **No replacement of previous versions** (reinforces D-9): every official version keeps its own independent archive; never overwrite, delete, identity-losing rename, replace an older version's archive with a new one, delete a recorded SHA, or rely on "the latest copy" instead of the version chain. The owner must be able to return to **any** previous official version as an independent snapshot.
+- **Sequence** (per D-4/D-5): BuyTuk Academy 1.7 → 1.8 → 1.9 → 1.10 → 1.11 … — no skips or number reuse without explicit governance documentation; Phase ≠ Version; the new version is officially bound to its phase at close.
+
 ## Version chain registry (canonical seed — evidence-based)
 
 | Version | Phase | Phase commit (HEAD) | Close Record | Complete Project Reference | SHA-256 |
@@ -63,8 +81,9 @@ This rule set is recorded as this ADR and cross-referenced in `EXECUTION-REFEREN
 1. Build the Complete Project Reference from the actual working tree (full snapshot, exclusions per D-2).
 2. Compute and record: `sha256sum ARCHIVE` (filename, exact byte size, SHA-256, creation date, Git HEAD, project version, phase, phase-close commit, file/dir counts / inventory).
 3. Verify integrity: `tar -tzf ARCHIVE >/dev/null` must exit 0; presence gates for the D-2 critical items (`.git/HEAD`, V1, governance docs, `_history/`, previous references, `.env.example`).
-4. Update the Version Chain Registry above + MANIFEST + SIDECAR + phase archive closeout — all with the SAME final SHA-256.
-5. Only then: adopt the new version number and mark the phase finally complete.
+4. Confirm **DOWNLOADABILITY** (D-12): deliver/upload the archive with a working download link and record that link in the phase record — the version is not official without a downloadable archive.
+5. Update the Version Chain Registry above + MANIFEST + SIDECAR + phase archive closeout — all with the SAME final SHA-256.
+6. Only then: adopt the new version number and mark the phase finally complete.
 
 ## Application
 
