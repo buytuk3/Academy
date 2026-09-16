@@ -16,6 +16,7 @@
   </header>
 
   <main id="app">
+    <nav id="portal-nav" class="hidden" aria-label="بوابات الأدوار"></nav>
     <section id="view-login" class="view card">
       <h1>الدخول الآمن</h1>
       <p class="muted">يمكنك الدخول كطالب عبر الهوية الرسمية، أو كعضو فريق عبر البريد وكلمة المرور. الجلسة تُحفَظ محليًا وتُجدَّد عبر refresh token عندما يكون ذلك مدعومًا.</p>
@@ -49,6 +50,24 @@
       <div id="login-error" class="error hidden"></div>
       <div id="login-success" class="notice hidden"></div>
       <p class="muted small">ملاحظة: تسجيل الحسابات الجديدة من الواجهة غير مدعوم بعد، لكن مسارات login / refresh / logout / forgot-password أصبحت موصولة فعليًا.</p>
+    </section>
+
+    <!-- PHASE-3 (CORE-WEB-PORTAL-SHELL): role-aware portal root (ACR-E5-001 — no mock data) -->
+    <section id="view-portal-home" class="view hidden">
+      <div class="card">
+        <h1 id="portal-title"></h1>
+        <div id="portal-meta" class="muted small"></div>
+        <div id="portal-capability-panel"></div>
+      </div>
+    </section>
+
+    <section id="view-portal-placeholder" class="view hidden">
+      <div class="card">
+        <button class="link" data-nav="portal-home">← عودة إلى البوابة</button>
+        <h1 id="portal-placeholder-title"></h1>
+        <div id="portal-placeholder-text" class="notice">غير مدعومة بعد — Not Supported Yet</div>
+        <div id="portal-placeholder-phase" class="muted small"></div>
+      </div>
     </section>
 
     <section id="view-forgot-password" class="view card hidden">

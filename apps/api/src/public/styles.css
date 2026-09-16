@@ -140,3 +140,8 @@ th {
 .auth-links { display:flex; justify-content:flex-start; margin-top:.5rem; }
 .secondary { background:#e7eef9; color:#28456f; font-weight:700; }
 .stack { display:flex; flex-direction:column; gap:.7rem; margin-top:1rem; }
+
+/* PHASE-3 — role-aware portal shell */
+#portal-nav { display:flex; flex-wrap:wrap; gap:.5rem; margin:0 0 1rem; }
+#portal-nav .nav-item { background:#fff; border:1px solid #cfd8e6; color:#24457a; font-weight:600; }
+#portal-nav .nav-item:hover { background:#eef5ff; }

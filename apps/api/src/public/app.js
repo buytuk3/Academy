@@ -38,6 +38,48 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const uuid = () => crypto.randomUUID();
 const isVoiceExercise = (ex) => ex?.type === "VOICE" || ex?.engine === "READING";
 
+/* PHASE-3 (CORE-WEB-PORTAL-SHELL) — role-aware portal shell (ACR-E5-001).
+ * Role source of truth = JWT / authenticated identity ONLY:
+ *  - student mode: the token role claim is "student" (issued by
+ *    studentLoginWithIdentity and verified on every request);
+ *  - staff mode: the role mirrors the server's login/refresh response and is
+ *    re-verified via GET /v1/auth/me on session restore (the server derives
+ *    it from req.user — the JWT). NEVER from URL/query/localStorage/form.
+ * The shell is presentation-only: the real boundaries remain API authorization
+ * + tenant isolation + RLS (PHASE-2). Capabilities without a real /v1 surface
+ * render an explicit "غير مدعومة بعد" placeholder — zero mock data. */
+const PORTAL_TITLES = {
+  student: "بوابة الطالب",
+  teacher: "بوابة المعلم",
+  parent: "بوابة ولي الأمر",
+  principal: "بوابة المدير",
+  admin: "بوابة المسؤول",
+};
+const PORTAL_ROUTES = {
+  student: ["dashboard", "read", "learn", "practice", "reports", "exercises", "progress", "messages", "notes", "wallet", "points-store", "support"],
+  teacher: ["dashboard", "passages", "lessons", "students", "classes", "reports", "exercises", "analytics", "schedule", "attendance", "ratings", "voice-qa", "settings"],
+  parent: ["dashboard", "children", "progress", "reports", "communication"],
+  principal: ["dashboard", "teachers", "students", "classes", "analytics", "reports"],
+  admin: ["dashboard", "users", "queue", "audit", "models", "settings"],
+};
+const PORTAL_CAP_TITLES = {
+  dashboard: "اللوحة الرئيسية", read: "القراءة", learn: "التعلّم", practice: "التدريب",
+  reports: "التقارير", exercises: "الأنشطة", progress: "التقدم", messages: "الرسائل",
+  notes: "الملاحظات", wallet: "المحفظة", "points-store": "متجر النقاط", support: "الدعم",
+  passages: "المقاطع", lessons: "الدروس", students: "الطلاب", classes: "الصفوف",
+  analytics: "التحليلات", schedule: "الجدول", attendance: "الحضور", ratings: "التقييمات",
+  "voice-qa": "القراءة الصوتية", settings: "الإعدادات", children: "الأبناء",
+  communication: "التواصل", teachers: "المعلمون", users: "المستخدمون", queue: "قائمة الانتظار",
+  audit: "سجل التدقيق", models: "النماذج",
+};
+const PORTAL_CAP_PHASE = {
+  student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", messages: "PHASE-11", notes: "PHASE-11", wallet: "PHASE-11", "points-store": "PHASE-11", support: "PHASE-11" },
+  teacher: { passages: "PHASE-7", lessons: "PHASE-7", students: "PHASE-7", classes: "PHASE-7", reports: "PHASE-7", exercises: "PHASE-7", analytics: "PHASE-7", schedule: "PHASE-7", attendance: "PHASE-11", ratings: "PHASE-7", "voice-qa": "PHASE-7", settings: "PHASE-7" },
+  parent: { children: "PHASE-8", progress: "PHASE-8", reports: "PHASE-8", communication: "PHASE-8" },
+  principal: { teachers: "PHASE-9", students: "PHASE-9", classes: "PHASE-9", analytics: "PHASE-9", reports: "PHASE-9" },
+  admin: { users: "PHASE-9", queue: "PHASE-9", audit: "PHASE-9", models: "PHASE-9", settings: "PHASE-9" },
+};
+
 function slugFileName(name) {
   const clean = String(name ?? "reading-audio.bin")
     .trim()
@@ -112,6 +154,8 @@ async function safeLogout() {
   });
   clearSessionStorage();
   syncHeader();
+  $("portal-nav").classList.add("hidden");
+  $("portal-nav").innerHTML = "";
   showLoginMode("student");
   show("view-login");
 }
@@ -273,7 +317,7 @@ $("login-form").addEventListener("submit", async (e) => {
     state.user = { role: "student", id: state.studentId };
     persistSession();
     syncHeader();
-    await renderDashboard();
+    await activatePortal();
     return;
   }
 
@@ -292,9 +336,7 @@ $("login-form").addEventListener("submit", async (e) => {
   state.studentId = null;
   persistSession();
   syncHeader();
-  show("view-dashboard");
-  $("dash-meta").textContent = `جلسة فريق العمل · ${state.user?.email ?? ""}`;
-  $("dash-progress").innerHTML = `<div class="item">تم تسجيل الدخول بنجاح. لوحات الفريق التفصيلية ستُربط في المراحل التالية عبر واجهات المعلم/الإدارة الحقيقية.</div>`;
+  await activatePortal();
 });
 
 document.addEventListener("click", (e) => {
@@ -302,6 +344,7 @@ document.addEventListener("click", (e) => {
   if (nav === "dashboard") renderDashboard();
   if (nav === "lesson" && state.currentLesson) openLesson(state.currentLesson);
   if (nav === "login") show("view-login");
+  if (nav === "portal-home") openPortalCapability("dashboard");
 });
 
 $("forgot-password-form").addEventListener("submit", async (e) => {
@@ -348,6 +391,91 @@ $("activity-audio-file")?.addEventListener("change", () => {
   const kb = Math.max(1, Math.round(file.size / 1024));
   setVoiceStatus(`جاهز للرفع: ${file.name} (${kb} KB)`, "notice");
 });
+
+/* PHASE-3 — role-aware portal routing (presentation-only). */
+function currentRole() {
+  return state.authMode === "student" ? "student" : state.user?.role ?? null;
+}
+
+/** Re-verifies identity/role against the server (JWT → req.user). Reuses the
+ * existing GET /v1/auth/me — no new endpoint, no new privileges (PHASE-3 rule). */
+async function fetchVerifiedIdentity() {
+  let me = await api("GET", "/v1/auth/me");
+  if (me.status === 401 && (await refreshIfPossible())) me = await api("GET", "/v1/auth/me");
+  if (me.status !== 200 || !me.json?.user) return null;
+  return me.json;
+}
+
+async function activatePortal() {
+  const role = currentRole();
+  if (!role) {
+    await safeLogout();
+    return;
+  }
+  renderPortalNav(role);
+  if (role === "student") {
+    await renderDashboard();
+    return;
+  }
+  openPortalCapability("dashboard");
+}
+
+function renderPortalNav(role) {
+  const nav = $("portal-nav");
+  nav.dataset.role = role;
+  const caps = PORTAL_ROUTES[role] ?? [];
+  nav.innerHTML = caps
+    .map((c) => `<button type="button" class="nav-item" data-portal-cap="${esc(c)}">${esc(PORTAL_CAP_TITLES[c] ?? c)}</button>`)
+    .join("");
+  nav.classList.remove("hidden");
+  nav.querySelectorAll("[data-portal-cap]").forEach((b) =>
+    b.addEventListener("click", () => openPortalCapability(b.dataset.portalCap)));
+}
+
+function openPortalCapability(cap) {
+  const role = currentRole();
+  if (!role) {
+    show("view-login");
+    return;
+  }
+  if (cap === "dashboard" && role !== "student" && role !== "parent") {
+    renderStaffDashboard(role);
+    return;
+  }
+  if (cap === "dashboard" && role === "student") {
+    renderDashboard();
+    return;
+  }
+  renderPortalPlaceholder(role, cap);
+}
+
+async function renderStaffDashboard(role) {
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  $("portal-meta").textContent = `الدور (من الهوية الموثقة): ${role}` + (state.user?.email ? ` · ${state.user.email}` : "");
+  show("view-portal-home");
+  $("portal-capability-panel").innerHTML = `<div class="muted small">جارٍ تحميل البيانات الحقيقية…</div>`;
+  const r = await api("GET", "/v1/teacher/review-queue");
+  if (r.status === 401 && (await refreshIfPossible())) return renderStaffDashboard(role);
+  if (r.status === 403) {
+    $("portal-capability-panel").innerHTML = `<div class="error">403 — غير مصرح: هذا الدور لا يملك صلاحية هذه اللوحة (الحماية الحقيقية من الـ API وليس من الواجهة).</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    $("portal-capability-panel").innerHTML = `<div class="error">تعذر تحميل لوحة الفريق (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا تُعرض بيانات وهمية.</div>`;
+    return;
+  }
+  const pending = Array.isArray(r.json?.pendingProposals) ? r.json.pendingProposals : [];
+  $("portal-capability-panel").innerHTML = `
+    <div class="stat"><span class="muted small">المقترحات المعلقة (حقيقية من /v1/teacher/review-queue)</span><b>${pending.length}</b></div>
+    <div class="muted small">قدرات الفريق التفصيلية (مراجعة/تقارير/تحليلات) تُبنى في المراحل اللاحقة وفق خارطة الطريق — لا بيانات وهمية هنا.</div>`;
+}
+
+function renderPortalPlaceholder(role, cap) {
+  const phase = (PORTAL_CAP_PHASE[role] ?? {})[cap] ?? "مرحلة لاحقة معتمدة";
+  $("portal-placeholder-title").textContent = `${PORTAL_CAP_TITLES[cap] ?? cap} — ${PORTAL_TITLES[role] ?? ""}`;
+  $("portal-placeholder-phase").textContent = `القدرة موثقة في V1 وسيُبنى تنفيذها في ${phase} وفق MASTER ROADMAP. لا توجد بيانات وهمية هنا (ACR-E5-001).`;
+  show("view-portal-placeholder");
+}
 
 async function renderDashboard() {
   if (state.authMode !== "student") {
@@ -589,11 +717,19 @@ function renderResult(attempt) {
     return;
   }
   syncHeader();
-  if (state.authMode === "student" && state.studentId) {
-    await renderDashboard();
+  // PHASE-3: the role is ALWAYS re-verified from the authenticated identity —
+  // the server derives it from the JWT via GET /v1/auth/me (reused endpoint).
+  // The cached session copy is never trusted as the role source by itself.
+  const me = await fetchVerifiedIdentity();
+  if (!me) {
+    await safeLogout();
     return;
   }
-  show("view-dashboard");
-  $("dash-meta").textContent = `جلسة فريق العمل · ${state.user?.email ?? ""}`;
-  $("dash-progress").innerHTML = `<div class="item">تمت استعادة الجلسة بنجاح.</div>`;
+  state.user = me.user ?? state.user;
+  if (state.authMode === "student" && !state.studentId && me.studentContext?.studentId) {
+    state.studentId = me.studentContext.studentId;
+  }
+  persistSession();
+  syncHeader();
+  await activatePortal();
 })();
