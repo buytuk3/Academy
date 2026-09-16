@@ -138,7 +138,7 @@ d("CORE-32 / P1 — Student Web UI: real browser drives the real Student Product
     await page.click("#login-form button[type=submit]");
     await page.waitForSelector("#login-error:not(.hidden)", { timeout: 20000 });
     const err = await page.textContent("#login-error");
-    expect(err).toMatch(/فشل الدخول \(4\d\d\)/);
+    expect(err).toMatch(/فشل دخول الطالب \(4\d\d\)/);
     expect(await page.isVisible("#view-dashboard")).toBe(false);
     await page.close();
   });
