@@ -70,8 +70,9 @@ Binding clarification adopted by the owner: **«الإصدار الرسمي لا
 | Version | Phase | Phase commit (HEAD) | Close Record | Complete Project Reference | SHA-256 |
 |---|---|---|---|---|---|
 | **BuyTuk Academy 1.7** (superseded by 1.8 — preserved per D-9) | PHASE-3 — CLOSED / PASS | `ad538c9ab1eaaf909b0aa8ee24382c714413d07a` | `docs/reports/PHASE-3-CLOSE-RECORD-2026-09-16.md` (+ `PHASE-3-CORE-WEB-PORTAL-SHELL-CLOSEOUT-2026-09-16.md`) | `buytuk-academy-COMPLETE-PROJECT-REFERENCE-POST-PHASE-3-2026-09-16.tar.gz` | `9feb51aa11eb1862cfb4d0337d38fccd2902ec5791d3ea30c26b82d8529edb63` |
-| **BuyTuk Academy 1.8** (current Last Known Good — adopted at the PHASE-4 closeout, 2026-09-16; D-12 proof: downloadable + `tar -tzf` exit 0) | PHASE-4 — CLOSED / PASS | `bc0a6cacc06bbf1a450f6a239ffed07765542ebc` | `docs/reports/PHASE-4-API-GATEWAY-ALIGNMENT-CLOSEOUT-2026-09-16.md` | `buytuk-academy-COMPLETE-PROJECT-REFERENCE-POST-PHASE-4-2026-09-16.tar.gz` | `3adc5c04d6e48afeeed5cebd6d60e2508d9fbca8b3bb156e17971277d8e5f20d` |
-| *(next — NOT yet assigned)* | assigned ONLY at the next phase CLOSE + ARCHIVE (expected: PHASE-5 → **BuyTuk Academy 1.9**) | — | — | — | — |
+| **BuyTuk Academy 1.8** (superseded by 1.9 — preserved per D-9) | PHASE-4 — CLOSED / PASS | `bc0a6cacc06bbf1a450f6a239ffed07765542ebc` | `docs/reports/PHASE-4-API-GATEWAY-ALIGNMENT-CLOSEOUT-2026-09-16.md` | `buytuk-academy-COMPLETE-PROJECT-REFERENCE-POST-PHASE-4-2026-09-16.tar.gz` | `3adc5c04d6e48afeeed5cebd6d60e2508d9fbca8b3bb156e17971277d8e5f20d` |
+| **BuyTuk Academy 1.9** (current Last Known Good — adopted at the PHASE-5 closeout, 2026-09-16; D-12 proof: downloadable + `tar -tzf` exit 0) | PHASE-5 — CLOSED / PASS | `4a2104a132e52600574db70f8eb143c33dff8a34` | `docs/reports/PHASE-5-SHARED-INFRA-AND-INFERENCE-CLOSEOUT-2026-09-16.md` | `buytuk-academy-COMPLETE-PROJECT-REFERENCE-POST-PHASE-5-2026-09-16.tar.gz` | `b870b2c7c2963ea8f320ee40083a2a02820c45fde09fc9b8f19f2d5c1215a3f9` |
+| *(next — NOT yet assigned)* | assigned ONLY at the next phase CLOSE + ARCHIVE (expected: PHASE-6 → **BuyTuk Academy 1.10**) | — | — | — | — |
 
 **Pre-system lineage (preserved identifiers — unchanged, per D-9):** local tag `BuyTuk.V0.1.3` → `41b0bba3501eb221d16f474299e44d39c709b104`; earlier reference archives remain preserved with their own SHAs: POST-PHASE-2 `6a82efd9…`, OFFICIAL V0.1.3 `c0258c26…`, PHASE-1 `8922dbd2…`, CONSOLIDATED V3 `e541b44a…`, OLD V0.1.5 `4e29ad83…`.
 
@@ -88,5 +89,5 @@ Binding clarification adopted by the owner: **«الإصدار الرسمي لا
 
 ## Application
 
-- **Applies from the NEXT phase closeout onward** (first issuance under the new system expected at the PHASE-4 closeout → BuyTuk Academy 1.8). **COMPLETED: BuyTuk Academy 1.8 adopted at the PHASE-4 closeout (2026-09-16) — registry updated.**
+- **Applies from the NEXT phase closeout onward** (first issuance under the new system expected at the PHASE-4 closeout → BuyTuk Academy 1.8). **COMPLETED: BuyTuk Academy 1.8 adopted at the PHASE-4 closeout (2026-09-16) — registry updated. COMPLETED: BuyTuk Academy 1.9 adopted at the PHASE-5 closeout (2026-09-16) — registry updated.**
 - **No retroactive archive re-creation** — owner ruling: the adopted POST-PHASE-3 reference stands as the official PHASE-3 reference.
