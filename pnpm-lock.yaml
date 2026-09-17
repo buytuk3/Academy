@@ -137,6 +137,9 @@ importers:
       '@buytuk/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@opentelemetry/api':
+        specifier: 1.9.1
+        version: 1.9.1
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -167,6 +170,9 @@ importers:
       '@workspace/security':
         specifier: workspace:*
         version: link:../../packages/security
+      aws-sdk:
+        specifier: ^2.1618.0
+        version: 2.1693.0
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -5378,7 +5384,7 @@ snapshots:
   buffer@4.9.2:
     dependencies:
       base64-js: 1.5.1
-      ieee754: 1.1.13
+      ieee754: 1.2.1
       isarray: 1.0.0
 
   buffer@6.0.3:
