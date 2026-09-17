@@ -234,10 +234,12 @@ d("PHASE-8 — Parent capabilities: access/visibility gates (real browser + real
     const pPage = await browser!.newPage();
     await staffLogin(pPage, PARENT_A.email);
     await pPage.waitForSelector("#view-portal-home:not(.hidden)");
+    /* PHASE-11 EVOLUTION (ADR-034): parent communication is now a REAL
+     * messages surface — the alignment assertion moves from placeholder to
+     * REAL data (empty-real list, no mocks). */
     await pPage.click('[data-portal-cap="communication"]');
-    await pPage.waitForSelector("#view-portal-placeholder:not(.hidden)");
-    expect(await pPage.textContent("#portal-placeholder-text")).toContain("غير مدعومة بعد");
-    expect(await pPage.textContent("#portal-placeholder-phase")).toContain("PHASE-11");
+    await pPage.waitForFunction(() => (document.getElementById("portal-capability-panel")?.textContent ?? "").includes("الرسائل"), { timeout: 20000 });
+    expect(await pPage.textContent("#portal-capability-panel")).not.toContain("غير مدعومة بعد");
     await pPage.close();
   });
 });

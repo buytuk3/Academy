@@ -352,10 +352,12 @@ d("PHASE-10 — Engines (assessment/dictation/diagnosis/content/lesson): per-eng
     expect(vq).not.toContain("غير مدعومة بعد");
 
     // ratings → NO canonical table exists (would require a migration — deferred per ADR-033): explicit placeholder, re-targeted PHASE-11
+    /* PHASE-11 EVOLUTION (ADR-034): ratings is now a REAL surface (ADR-033
+     * re-target honored) — the alignment assertion moves from placeholder to
+     * REAL data. */
     await page.click('[data-portal-cap="ratings"]');
-    await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
-    expect(await page.textContent("#portal-placeholder-text")).toContain("غير مدعومة بعد");
-    expect(await page.textContent("#portal-placeholder-phase")).toContain("PHASE-11");
+    await page.waitForFunction(() => (document.getElementById("portal-capability-panel")?.textContent ?? "").includes("تقييمات المعلمين"), { timeout: 20000 });
+    expect(await page.textContent("#portal-capability-panel")).not.toContain("غير مدعومة بعد");
     await page.close();
 
     // boundaries: unauthenticated attempt start is a real 401 from the API

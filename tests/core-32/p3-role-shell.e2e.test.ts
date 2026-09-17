@@ -198,7 +198,9 @@ d("PHASE-3 — Role-aware portal shell (real browser + real API + real auth)", (
     const page = await browser!.newPage();
     await staffLogin(page, TEACHER_A.email);
     await page.waitForSelector("#view-portal-home:not(.hidden)");
-    await page.click('[data-portal-cap="attendance"]');
+    /* PHASE-11 EVOLUTION (ADR-034): attendance is now a REAL surface — the
+     * generic placeholder example moves to a still-deferred cap (settings). */
+    await page.click('[data-portal-cap="settings"]');
     await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
     expect(await page.textContent("#portal-placeholder-text")).toContain("غير مدعومة بعد");
     await page.click('[data-nav="portal-home"]');

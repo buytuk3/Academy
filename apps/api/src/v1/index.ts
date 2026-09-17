@@ -14,6 +14,7 @@ import teacher from "./teacher.js";
 import lessons from "./lessons.js";
 import parents from "./parents.js";
 import principal from "./principal.js";
+import engagement from "./engagement.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(teacher);
 router.use(lessons);
 router.use(parents);
 router.use(principal);
+router.use(engagement);
 
 export default router;

@@ -472,6 +472,79 @@ paths:
         '200': { description: Audit events }
         '401': { description: Unauthenticated }
         '403': { description: Role gate denied (admin only) }
+  /v1/wallet:
+    get:
+      operationId: getWallet
+      summary: 'PHASE-11: the authenticated student''s own points wallet (real balance + ledger)'
+      responses:
+        '200': { description: Wallet view }
+        '401': { description: Unauthenticated }
+        '403': { description: Student context required }
+  /v1/wallet/{studentId}/credit:
+    post:
+      operationId: creditWallet
+      summary: 'PHASE-11: staff credit of a student wallet (ledger-backed, idempotent)'
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201': { description: Credited }
+        '200': { description: Idempotent replay (no double credit) }
+        '400': { description: Invalid points/reason }
+        '401': { description: Unauthenticated }
+        '403': { description: Role gate denied }
+  /v1/messages:
+    get:
+      operationId: listMessages
+      summary: 'PHASE-11: own inbox+sent (same-tenant)'
+      responses:
+        '200': { description: Message list }
+        '401': { description: Unauthenticated }
+    post:
+      operationId: sendMessage
+      summary: 'PHASE-11: send a message to a same-tenant user (cross-tenant 404)'
+      responses:
+        '201': { description: Sent }
+        '400': { description: Invalid body }
+        '401': { description: Unauthenticated }
+        '404': { description: Recipient not in tenant }
+  /v1/attendance:
+    get:
+      operationId: listAttendance
+      summary: 'PHASE-11: staff attendance records scoped by membership coverage'
+      responses:
+        '200': { description: Attendance records }
+        '401': { description: Unauthenticated }
+        '403': { description: Role/scope gate denied }
+    post:
+      operationId: markAttendance
+      summary: 'PHASE-11: mark attendance (daily-unique idempotency; re-mark returns the existing row)'
+      responses:
+        '201': { description: Marked }
+        '200': { description: Already marked that day }
+        '400': { description: Invalid status/date }
+        '401': { description: Unauthenticated }
+        '403': { description: Role/scope gate denied }
+        '404': { description: Student not in tenant }
+  /v1/ratings:
+    get:
+      operationId: listRatings
+      summary: 'PHASE-11: staff ratings scoped by membership coverage (ADR-033 re-target)'
+      responses:
+        '200': { description: Ratings }
+        '401': { description: Unauthenticated }
+        '403': { description: Role/scope gate denied }
+    post:
+      operationId: rateStudent
+      summary: 'PHASE-11: staff rate a student 1..5 (idempotent)'
+      responses:
+        '201': { description: Rated }
+        '400': { description: Invalid score }
+        '401': { description: Unauthenticated }
+        '403': { description: Role/scope gate denied }
+        '404': { description: Student not in tenant }
 components:
   securitySchemes:
     bearerAuth:

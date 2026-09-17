@@ -20,3 +20,4 @@ export * from "./learning-loop";
 export * from "./parents";
 export * from "./content-library";
 export * from "./activity-state";
+export * from "./engagement";

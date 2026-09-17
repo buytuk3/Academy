@@ -73,9 +73,8 @@ const PORTAL_CAP_TITLES = {
   audit: "سجل التدقيق", models: "النماذج",
 };
 const PORTAL_CAP_PHASE = {
-  student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", messages: "PHASE-11", notes: "PHASE-11", wallet: "PHASE-11", "points-store": "PHASE-11", support: "PHASE-11" },
-  teacher: { students: "PHASE-7", reports: "PHASE-7", ratings: "PHASE-11", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-11", settings: "PHASE-12" },
-  parent: { communication: "PHASE-11" },
+  student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", "points-store": "PHASE-12", notes: "PHASE-12", support: "PHASE-12" },
+  teacher: { students: "PHASE-7", reports: "PHASE-7", schedule: "PHASE-12", classes: "PHASE-12", settings: "PHASE-12" },
   admin: { models: "PHASE-12", settings: "PHASE-12" },
 };
 
@@ -453,6 +452,18 @@ function openPortalCapability(cap) {
     renderParentDashboard();
     return;
   }
+  if (role === "student" && ["wallet", "messages"].includes(cap)) {
+    renderEngagementView(cap);
+    return;
+  }
+  if (role === "teacher" && ["attendance", "ratings"].includes(cap)) {
+    renderEngagementView(cap);
+    return;
+  }
+  if (role === "parent" && cap === "communication") {
+    renderEngagementView("communication");
+    return;
+  }
   if (role === "teacher" && ["passages", "lessons", "exercises", "analytics", "voice-qa"].includes(cap)) {
     renderEngineView(cap);
     return;
@@ -512,6 +523,54 @@ function renderTeacherReports() {
  * the canonical /v1 surface (content library, exercises library, oversight
  * aggregates) with the real JWT; zero mock data (ACR-E5-001). The engines
  * themselves are consumed through the canonical attempts flow (P10-2/3/4). */
+/* PHASE-11 (GAMIFICATION-MESSAGING-ATTENDANCE) — real engagement surfaces.
+ * Thin client ONLY: every panel calls the canonical /v1 API (wallet, messages,
+ * attendance, ratings) with the real JWT; zero mock data (ACR-E5-001). */
+async function renderEngagementView(cap) {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  let url; let meta;
+  if (cap === "wallet") { url = "/v1/wallet"; meta = "المحفظة — رصيد نقاط حقيقي (PHASE-11)"; }
+  else if (cap === "messages" || cap === "communication") { url = "/v1/messages"; meta = "الرسائل — محادثات حقيقية (PHASE-11)"; }
+  else if (cap === "attendance") { url = "/v1/attendance"; meta = "الحضور — سجلات حقيقية (PHASE-11)"; }
+  else { url = "/v1/ratings"; meta = "التقييمات — تقييمات حقيقية (PHASE-11)"; }
+  $("portal-meta").textContent = meta;
+  show("view-portal-home");
+  const panel = $("portal-capability-panel");
+  panel.innerHTML = `<div class="muted small">جارٍ تحميل البيانات الحقيقية…</div>`;
+  const r = await api("GET", url);
+  if (r.status === 401 && (await refreshIfPossible())) return renderEngagementView(cap);
+  if (r.status === 403) {
+    panel.innerHTML = `<div class="error">403 — غير مصرح: الحماية الحقيقية من الـ API وليس من الواجهة.</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    panel.innerHTML = `<div class="error">تعذر التحميل (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+    return;
+  }
+  if (cap === "wallet") {
+    const ledger = Array.isArray(r.json?.ledger) ? r.json.ledger : [];
+    panel.innerHTML = `<div class="stat"><span class="muted small">رصيد النقاط (حقيقي من /v1/wallet)</span><b>${esc(r.json?.balance)}</b></div>`
+      + (ledger.length === 0 ? `<div class="muted small">لا حركات على المحفظة بعد (سجل حقيقي — لا وهمي).</div>` : ledger.map((l) => `<div class="item">🪙 ${esc(l.delta > 0 ? "+" : "")}${esc(l.delta)} · ${esc(l.reason)} <span class="muted small">${esc(String(l.createdAt ?? ""))}</span></div>`).join(""));
+    return;
+  }
+  if (cap === "messages" || cap === "communication") {
+    const items = Array.isArray(r.json?.items) ? r.json.items : [];
+    panel.innerHTML = `<div class="stat"><span class="muted small">الرسائل (حقيقي من /v1/messages)</span><b>${items.length}</b></div>`
+      + (items.length === 0 ? `<div class="muted small">لا رسائل بعد (صندوق حقيقي — لا وهمي).</div>` : items.map((m) => `<div class="item">✉️ ${esc(m.fromUserId) === esc(state.user?.id) ? "➡️" : "⬅️"} ${esc(m.body)} <span class="muted small">${esc(String(m.createdAt ?? ""))}</span></div>`).join(""));
+    return;
+  }
+  if (cap === "attendance") {
+    const items = Array.isArray(r.json?.items) ? r.json.items : [];
+    panel.innerHTML = `<div class="stat"><span class="muted small">سجلات الحضور (حقيقي من /v1/attendance — حسب نطاق التغطية)</span><b>${items.length}</b></div>`
+      + (items.length === 0 ? `<div class="muted small">لا سجلات حضور في نطاقك بعد (قائمة حقيقية — لا وهمية).</div>` : items.map((a) => `<div class="item">🗓️ <b>${esc(a.status)}</b> · ${esc(a.sessionDate)} · طالب <code>${esc(String(a.studentId)).slice(0,8)}…</code></div>`).join(""));
+    return;
+  }
+  const items = Array.isArray(r.json?.items) ? r.json.items : [];
+  panel.innerHTML = `<div class="stat"><span class="muted small">تقييمات المعلمين (حقيقي من /v1/ratings — حسب نطاق التغطية)</span><b>${items.length}</b></div>`
+    + (items.length === 0 ? `<div class="muted small">لا تقييمات في نطاقك بعد (قائمة حقيقية — لا وهمية).</div>` : items.map((x) => `<div class="item">⭐ ${"★".repeat(Number(x.score) || 0)} · ${esc(x.note ?? "")} · طالب <code>${esc(String(x.studentId)).slice(0,8)}…</code></div>`).join(""));
+}
+
 async function renderEngineView(cap) {
   const role = currentRole();
   $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";

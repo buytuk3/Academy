@@ -248,10 +248,15 @@ d("PHASE-7 — Teacher capabilities: review/report/remediation gates (real brows
     const page = await browser!.newPage();
     await staffLogin(page, TEACHER_A.email);
     await page.waitForSelector("#view-portal-home:not(.hidden)");
+    /* PHASE-11 EVOLUTION (ADR-034): attendance is now a REAL surface (real
+     * records list) — the roadmap-alignment assertion moves from placeholder
+     * to REAL data; schedule keeps the explicit PHASE-12 placeholder. */
     await page.click('[data-portal-cap="attendance"]');
+    await page.waitForFunction(() => (document.getElementById("portal-capability-panel")?.textContent ?? "").includes("سجلات الحضور"), { timeout: 20000 });
+    expect(await page.textContent("#portal-capability-panel")).not.toContain("غير مدعومة بعد");
+    await page.click('[data-portal-cap="schedule"]');
     await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
-    expect(await page.textContent("#portal-placeholder-text")).toContain("غير مدعومة بعد");
-    expect(await page.textContent("#portal-placeholder-phase")).toContain("PHASE-11");
+    expect(await page.textContent("#portal-placeholder-phase")).toContain("PHASE-12");
     await page.click('[data-nav="portal-home"]');
     await page.waitForSelector("#view-portal-home:not(.hidden)");
     /* PHASE-10 EVOLUTION (ADR-033): passages is now a REAL content-library surface —

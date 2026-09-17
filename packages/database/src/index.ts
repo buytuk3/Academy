@@ -104,3 +104,13 @@ export type { MasteryRecordView } from "./reading/mastery-read.js";
 // PHASE-9 — Principal/Admin oversight READ capabilities (SELECT-only, tenant-scoped via withTenant → RLS).
 export { listTenantStaff, listTenantClasses, listTenantUsers, listAuditEvents } from "./principal/admin.js";
 export type { StaffRosterRow, ClassSummaryRow, TenantUserRow, AuditEventRow } from "./principal/admin.js";
+
+// PHASE-11 — Engagement capabilities (wallet/points, messages, attendance; ADR-034).
+export { getWalletView, creditWallet } from "./engagement/wallet.js";
+export type { WalletView, CreditResult } from "./engagement/wallet.js";
+export { sendMessage, listMessagesForUser } from "./engagement/messaging.js";
+export type { MessageView } from "./engagement/messaging.js";
+export { markAttendance, listAttendanceForStaff } from "./engagement/attendance.js";
+export { rateStudent, listRatingsForStaff } from "./engagement/ratings.js";
+export type { RatingView } from "./engagement/ratings.js";
+export type { AttendanceView, AttendanceStatus } from "./engagement/attendance.js";
