@@ -74,7 +74,7 @@ const PORTAL_CAP_TITLES = {
 };
 const PORTAL_CAP_PHASE = {
   student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", messages: "PHASE-11", notes: "PHASE-11", wallet: "PHASE-11", "points-store": "PHASE-11", support: "PHASE-11" },
-  teacher: { students: "PHASE-7", reports: "PHASE-7", passages: "PHASE-10", lessons: "PHASE-10", exercises: "PHASE-10", "voice-qa": "PHASE-10", ratings: "PHASE-10", analytics: "PHASE-10", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-11", settings: "PHASE-12" },
+  teacher: { students: "PHASE-7", reports: "PHASE-7", ratings: "PHASE-11", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-11", settings: "PHASE-12" },
   parent: { communication: "PHASE-11" },
   admin: { models: "PHASE-12", settings: "PHASE-12" },
 };
@@ -453,6 +453,10 @@ function openPortalCapability(cap) {
     renderParentDashboard();
     return;
   }
+  if (role === "teacher" && ["passages", "lessons", "exercises", "analytics", "voice-qa"].includes(cap)) {
+    renderEngineView(cap);
+    return;
+  }
   if (role === "principal" && ["dashboard", "teachers", "students", "classes", "analytics", "reports"].includes(cap)) {
     renderPrincipalView(cap);
     return;
@@ -502,6 +506,57 @@ function renderTeacherReports() {
 /* PHASE-9 (PRINCIPAL-ADMIN-CAPABILITIES) — real oversight/admin surfaces.
  * Thin-client only: every view calls the canonical /v1 API with the JWT role
  * gates proven server-side; no mock data anywhere (ACR-E5-001). */
+
+/* PHASE-10 (ENGINES-ASSESSMENT-DICTATION-DIAGNOSIS-CONTENT-LESSON) — real
+ * engine/content surfaces for the teacher. Thin client ONLY: every panel calls
+ * the canonical /v1 surface (content library, exercises library, oversight
+ * aggregates) with the real JWT; zero mock data (ACR-E5-001). The engines
+ * themselves are consumed through the canonical attempts flow (P10-2/3/4). */
+async function renderEngineView(cap) {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  let base = null; let meta = "";
+  if (cap === "passages") { base = "/v1/lessons?kind=PASSAGE"; meta = "المقاطع — مكتبة المحتوى الحقيقية (PHASE-10)"; }
+  else if (cap === "lessons") { base = "/v1/lessons"; meta = "الدروس — مكتبة المحتوى الحقيقية (PHASE-10)"; }
+  else if (cap === "exercises") { base = "/v1/exercises"; meta = "الأنشطة — المكتبة الحقيقية (PHASE-10)"; }
+  else if (cap === "voice-qa") { base = "/v1/exercises?engineBinding=READING"; meta = "القراءة الصوتية — سطح المحرك غير المتزامن (PHASE-10)"; }
+  else if (cap === "analytics") { base = "/v1/oversight/aggregates"; meta = "التحليلات — تجميعات إشراف حقيقية (PHASE-10)"; }
+  $("portal-meta").textContent = meta;
+  show("view-portal-home");
+  const panel = $("portal-capability-panel");
+  panel.innerHTML = `<div class="muted small">جارٍ تحميل البيانات الحقيقية…</div>`;
+  let url = base;
+  if (cap === "analytics") {
+    const from = new Date(Date.now() - 30 * 864e5).toISOString();
+    url = `${base}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(new Date().toISOString())}`;
+  }
+  const r = await api("GET", url);
+  if (r.status === 401 && (await refreshIfPossible())) return renderEngineView(cap);
+  if (r.status === 403) {
+    panel.innerHTML = `<div class="error">403 — غير مصرح: الحماية الحقيقية من الـ API وليس من الواجهة.</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    panel.innerHTML = `<div class="error">تعذر التحميل (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+    return;
+  }
+  if (cap === "analytics") {
+    const groups = Array.isArray(r.json?.groups) ? r.json.groups : [];
+    panel.innerHTML = `<div class="stat"><span class="muted small">مجموعات الإشراف (حقيقية من /v1/oversight/aggregates — خصوصية k-Anonymity)</span><b>${groups.length}</b></div>`
+      + (groups.length === 0 ? `<div class="muted small">لا مجموعات مؤهلة للعرض بعد (قمع الخصوصية يمنع المجموعات الصغيرة — بيانات حقيقية لا وهمية).</div>` : groups.map((g) => `<div class="item">📊 ${esc(g.subject ?? "—")} · ${esc(g.evidenceType ?? "—")} · متوسط ${esc(g.mean ?? "—")} · عينات ${esc(g.sampleSize)} <span class="badge">${esc(g.status)}</span></div>`).join(""));
+    return;
+  }
+  if (cap === "exercises" || cap === "voice-qa") {
+    const items = Array.isArray(r.json?.items) ? r.json.items : [];
+    panel.innerHTML = `<div class="stat"><span class="muted small">${cap === "exercises" ? "الأنشطة (حقيقي من /v1/exercises)" : "أنشطة القراءة الصوتية (حقيقي من /v1/exercises?engineBinding=READING — المحرك غير المتزامن المُثبَت في P1/P2)"}</span><b>${items.length}</b></div>`
+      + (items.length === 0 ? `<div class="muted small">لا أنشطة منشورة من هذا النوع بعد (قائمة حقيقية — لا وهمية).</div>` : items.map((x) => `<div class="item">🧩 ${esc(x.activityType ?? "")} · محرك <b>${esc(x.engineBinding ?? "")}</b> <span class="badge">${esc(x.status ?? "")}</span></div>`).join(""));
+    return;
+  }
+  const items = Array.isArray(r.json?.items) ? r.json.items : [];
+  panel.innerHTML = `<div class="stat"><span class="muted small">${cap === "passages" ? "المقاطع (حقيقي من /v1/lessons?kind=PASSAGE)" : "الدروس (حقيقي من /v1/lessons)"} </span><b>${items.length}</b></div>`
+    + (items.length === 0 ? `<div class="muted small">لا محتوى منشورًا بعد (قائمة حقيقية — لا وهمية).</div>` : items.map((x) => `<div class="item">📖 <b>${esc(x.title ?? "")}</b> · ${esc(x.subject ?? "")} · ${esc(x.status ?? "")}</div>`).join(""));
+}
+
 async function renderPrincipalView(cap) {
   const role = currentRole();
   $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";

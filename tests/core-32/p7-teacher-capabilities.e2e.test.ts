@@ -254,9 +254,11 @@ d("PHASE-7 — Teacher capabilities: review/report/remediation gates (real brows
     expect(await page.textContent("#portal-placeholder-phase")).toContain("PHASE-11");
     await page.click('[data-nav="portal-home"]');
     await page.waitForSelector("#view-portal-home:not(.hidden)");
+    /* PHASE-10 EVOLUTION (ADR-033): passages is now a REAL content-library surface —
+     * the roadmap-alignment assertion moves from placeholder to REAL data (no mock). */
     await page.click('[data-portal-cap="passages"]');
-    await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
-    expect(await page.textContent("#portal-placeholder-phase")).toContain("PHASE-10");
+    await page.waitForFunction(() => !(document.getElementById("portal-capability-panel")?.textContent ?? "").includes("جارٍ"), { timeout: 20000 });
+    expect(await page.textContent("#portal-capability-panel")).not.toContain("غير مدعومة بعد");
     await page.close();
   });
 });
