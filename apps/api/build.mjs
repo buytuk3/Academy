@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, cp } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -118,6 +118,10 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // PHASE-12 (DEPL-1): package the zero-build static UI into dist/public —
+  // the built server serves / and /ui from this directory.
+  await cp(path.resolve(artifactDir, "src/public"), path.resolve(distDir, "public"), { recursive: true });
 }
 
 buildAll().catch((err) => {
