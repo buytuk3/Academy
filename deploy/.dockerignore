@@ -1,0 +1,12 @@
+.git
+_history
+node_modules
+**/node_modules
+**/dist
+**/coverage
+*.log
+parts112
+docs
+tests
+playwright-report
+test-results
