@@ -11,7 +11,7 @@ const router: IRouter = Router();
 
 router.get("/metrics", async (_req, res) => {
   const metrics = getMetrics();
-  res.set("Content-Type", metrics.registry.contentType());
+  res.set("Content-Type", metrics.registry.contentType);
   res.send(await metrics.registry.metrics());
 });
 
