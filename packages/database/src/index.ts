@@ -100,3 +100,7 @@ export type { PendingProposalFilters } from "./teacher/proposals.js";
 // generalization to other engines is ACR-E4-001 (PENDING — not implemented).
 export { listMasteryRecords } from "./reading/mastery-read.js";
 export type { MasteryRecordView } from "./reading/mastery-read.js";
+
+// PHASE-9 — Principal/Admin oversight READ capabilities (SELECT-only, tenant-scoped via withTenant → RLS).
+export { listTenantStaff, listTenantClasses, listTenantUsers, listAuditEvents } from "./principal/admin.js";
+export type { StaffRosterRow, ClassSummaryRow, TenantUserRow, AuditEventRow } from "./principal/admin.js";

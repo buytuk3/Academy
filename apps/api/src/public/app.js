@@ -74,10 +74,9 @@ const PORTAL_CAP_TITLES = {
 };
 const PORTAL_CAP_PHASE = {
   student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", messages: "PHASE-11", notes: "PHASE-11", wallet: "PHASE-11", "points-store": "PHASE-11", support: "PHASE-11" },
-  teacher: { students: "PHASE-7", reports: "PHASE-7", passages: "PHASE-10", lessons: "PHASE-10", exercises: "PHASE-10", "voice-qa": "PHASE-10", ratings: "PHASE-10", analytics: "PHASE-10", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-9", settings: "PHASE-9" },
+  teacher: { students: "PHASE-7", reports: "PHASE-7", passages: "PHASE-10", lessons: "PHASE-10", exercises: "PHASE-10", "voice-qa": "PHASE-10", ratings: "PHASE-10", analytics: "PHASE-10", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-11", settings: "PHASE-12" },
   parent: { communication: "PHASE-11" },
-  principal: { teachers: "PHASE-9", students: "PHASE-9", classes: "PHASE-9", analytics: "PHASE-9", reports: "PHASE-9" },
-  admin: { users: "PHASE-9", queue: "PHASE-9", audit: "PHASE-9", models: "PHASE-9", settings: "PHASE-9" },
+  admin: { models: "PHASE-12", settings: "PHASE-12" },
 };
 
 function slugFileName(name) {
@@ -454,6 +453,14 @@ function openPortalCapability(cap) {
     renderParentDashboard();
     return;
   }
+  if (role === "principal" && ["dashboard", "teachers", "students", "classes", "analytics", "reports"].includes(cap)) {
+    renderPrincipalView(cap);
+    return;
+  }
+  if (role === "admin" && ["dashboard", "users", "queue", "audit", "models", "settings"].includes(cap)) {
+    renderAdminView(cap);
+    return;
+  }
   renderPortalPlaceholder(role, cap);
 }
 
@@ -490,6 +497,104 @@ async function renderStaffDashboard(role) {
 
 function renderTeacherReports() {
   renderStaffDashboard(currentRole());
+}
+
+/* PHASE-9 (PRINCIPAL-ADMIN-CAPABILITIES) — real oversight/admin surfaces.
+ * Thin-client only: every view calls the canonical /v1 API with the JWT role
+ * gates proven server-side; no mock data anywhere (ACR-E5-001). */
+async function renderPrincipalView(cap) {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  if (cap === "analytics") {
+    $("portal-meta").textContent = "التحليلات — تجميعات الإشراف الحقيقية (PHASE-9)";
+    show("view-portal-home");
+    const panel = $("portal-capability-panel");
+    panel.innerHTML = `<div class="muted small">جارٍ تحميل تجميعات الإشراف الحقيقية…</div>`;
+    const from = new Date(Date.now() - 30 * 864e5).toISOString();
+    const to = new Date().toISOString();
+    const r = await api("GET", `/v1/oversight/aggregates?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    if (r.status === 401 && (await refreshIfPossible())) return renderPrincipalView(cap);
+    if (r.status !== 200) {
+      panel.innerHTML = `<div class="error">تعذر تحميل التحليلات (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+      return;
+    }
+    const groups = Array.isArray(r.json?.groups) ? r.json.groups : [];
+    panel.innerHTML = `
+      <div class="stat"><span class="muted small">مجموعات الإشراف (حقيقية من /v1/oversight/aggregates — خصوصية k-Anonymity)</span><b>${groups.length}</b></div>
+      ${groups.length === 0 ? `<div class="muted small">لا مجموعات مؤهلة للعرض بعد (قمع الخصوصية يمنع المجموعات الصغيرة — بيانات حقيقية لا وهمية).</div>` : groups.map((g) => `<div class="item">📊 ${esc(g.subject ?? "—")} · ${esc(g.evidenceType ?? "—")} · متوسط ${esc(g.mean ?? "—")} · عينات ${esc(g.sampleSize)} <span class="badge">${esc(g.status)}</span></div>`).join("")}`;
+    return;
+  }
+  if (cap === "teachers" || cap === "classes") {
+    $("portal-meta").textContent = cap === "teachers" ? "المعلمون — كادر حقيقي (PHASE-9)" : "الصفوف — صفوف حقيقية (PHASE-9)";
+    show("view-portal-home");
+    const panel = $("portal-capability-panel");
+    panel.innerHTML = `<div class="muted small">جارٍ تحميل البيانات الحقيقية…</div>`;
+    const r = await api("GET", cap === "teachers" ? "/v1/admin/staff" : "/v1/admin/classes");
+    if (r.status === 401 && (await refreshIfPossible())) return renderPrincipalView(cap);
+    if (r.status === 403) {
+      panel.innerHTML = `<div class="error">403 — غير مصرح: الحماية الحقيقية من الـ API وليس من الواجهة.</div>`;
+      return;
+    }
+    if (r.status !== 200) {
+      panel.innerHTML = `<div class="error">تعذر التحميل (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+      return;
+    }
+    if (cap === "teachers") {
+      const staff = Array.isArray(r.json?.staff) ? r.json.staff : [];
+      panel.innerHTML = `
+        <div class="stat"><span class="muted small">أعضاء الكادر (حقيقي من /v1/admin/staff — عضويات النطاق)</span><b>${staff.length}</b></div>
+        ${staff.length === 0 ? `<div class="muted small">لا عضويات كادر مسجلة بعد (قائمة حقيقية — لا وهمية).</div>` : staff.map((s) => `<div class="item">👤 <b>${esc(s.firstName)} ${esc(s.lastName)}</b> · ${esc(s.role)} · نطاق ${esc(s.scopeType)}${s.email ? ` · ${esc(s.email)}` : ""}</div>`).join("")}`;
+    } else {
+      const classes = Array.isArray(r.json?.classes) ? r.json.classes : [];
+      panel.innerHTML = `
+        <div class="stat"><span class="muted small">الصفوف (حقيقي من /v1/admin/classes)</span><b>${classes.length}</b></div>
+        ${classes.length === 0 ? `<div class="muted small">لا صفوف مسجلة بعد (قائمة حقيقية — لا وهمية).</div>` : classes.map((c) => `<div class="item">🏫 <b>${esc(c.name)}</b> · ${esc(c.gradeLevel)} · طلاب: ${esc(c.studentCount)}</div>`).join("")}`;
+    }
+    return;
+  }
+  // students / reports — real review queue + student report via the canonical scope gate (PHASE-7 surface)
+  $("portal-meta").textContent = "تقارير الطلاب — عبر بوابة النطاق الحقيقية (PHASE-9)";
+  show("view-portal-home");
+  await renderStaffDashboard(role);
+}
+
+async function renderAdminView(cap) {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  if (cap === "queue") {
+    renderStaffDashboard(role);
+    return;
+  }
+  if (cap === "models" || cap === "settings") {
+    renderPortalPlaceholder(role, cap);
+    return;
+  }
+  const path = cap === "users" ? "/v1/admin/users" : "/v1/admin/audit";
+  $("portal-meta").textContent = cap === "users" ? "المستخدمون — حسابات حقيقية (PHASE-9)" : "سجل التدقيق — أحداث حقيقية (PHASE-9)";
+  show("view-portal-home");
+  const panel = $("portal-capability-panel");
+  panel.innerHTML = `<div class="muted small">جارٍ تحميل البيانات الحقيقية…</div>`;
+  const r = await api("GET", path);
+  if (r.status === 401 && (await refreshIfPossible())) return renderAdminView(cap);
+  if (r.status === 403) {
+    panel.innerHTML = `<div class="error">403 — غير مصرح: الحماية الحقيقية من الـ API وليس من الواجهة.</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    panel.innerHTML = `<div class="error">تعذر التحميل (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+    return;
+  }
+  if (cap === "users") {
+    const users = Array.isArray(r.json?.users) ? r.json.users : [];
+    panel.innerHTML = `
+      <div class="stat"><span class="muted small">الحسابات (حقيقي من /v1/admin/users)</span><b>${users.length}</b></div>
+      ${users.length === 0 ? `<div class="muted small">لا حسابات بعد (قائمة حقيقية — لا وهمية).</div>` : users.map((u) => `<div class="item">🧑‍💼 <b>${esc(u.firstName)} ${esc(u.lastName)}</b> · ${esc(u.role)} · ${esc(u.email)}</div>`).join("")}`;
+  } else {
+    const events = Array.isArray(r.json?.events) ? r.json.events : [];
+    panel.innerHTML = `
+      <div class="stat"><span class="muted small">أحداث التدقيق (حقيقي من /v1/admin/audit — سجل التدقيق)</span><b>${events.length}</b></div>
+      ${events.length === 0 ? `<div class="muted small">سجل التدقيق فارغ بعد (قائمة حقيقية — لا وهمية).</div>` : events.map((ev) => `<div class="item">🧾 <b>${esc(ev.action)}</b> · ${esc(ev.entity ?? "—")}${ev.actorId ? ` · <span class="muted small">${esc(String(ev.actorId)).slice(0, 8)}…</span>` : ""}</div>`).join("")}`;
+  }
 }
 
 async function renderTeacherReport(studentId) {
