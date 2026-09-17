@@ -1,0 +1,17 @@
+{
+  "measured": {
+    "lines": 40.41,
+    "functions": 12.82,
+    "statements": 40.41,
+    "branches": 55
+  },
+  "thresholds": {
+    "lines": 40,
+    "functions": 10,
+    "statements": 40,
+    "branches": 55
+  },
+  "basis": "apps/api contract suite (real app object, 8 tests)",
+  "date": "2026-09-17",
+  "provider": "@vitest/coverage-v8@1.6.1 (store-exact, dev-only — ADR-035)"
+}
