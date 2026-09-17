@@ -75,7 +75,7 @@ const PORTAL_CAP_TITLES = {
 const PORTAL_CAP_PHASE = {
   student: { read: "PHASE-6", learn: "PHASE-6", practice: "PHASE-6", reports: "PHASE-6", exercises: "PHASE-6", progress: "PHASE-6", messages: "PHASE-11", notes: "PHASE-11", wallet: "PHASE-11", "points-store": "PHASE-11", support: "PHASE-11" },
   teacher: { students: "PHASE-7", reports: "PHASE-7", passages: "PHASE-10", lessons: "PHASE-10", exercises: "PHASE-10", "voice-qa": "PHASE-10", ratings: "PHASE-10", analytics: "PHASE-10", attendance: "PHASE-11", schedule: "PHASE-11", classes: "PHASE-9", settings: "PHASE-9" },
-  parent: { children: "PHASE-8", progress: "PHASE-8", reports: "PHASE-8", communication: "PHASE-8" },
+  parent: { communication: "PHASE-11" },
   principal: { teachers: "PHASE-9", students: "PHASE-9", classes: "PHASE-9", analytics: "PHASE-9", reports: "PHASE-9" },
   admin: { users: "PHASE-9", queue: "PHASE-9", audit: "PHASE-9", models: "PHASE-9", settings: "PHASE-9" },
 };
@@ -450,6 +450,10 @@ function openPortalCapability(cap) {
     renderTeacherReports();
     return;
   }
+  if (role === "parent" && ["dashboard", "children", "progress", "reports"].includes(cap)) {
+    renderParentDashboard();
+    return;
+  }
   renderPortalPlaceholder(role, cap);
 }
 
@@ -522,6 +526,70 @@ async function renderTeacherReport(studentId) {
     <div class="muted small">التوصية التالية: ${d.nextActivity ? `${esc(d.nextActivity.proposedActivityType)} — ${esc(d.nextActivity.currentSkill)} → ${esc(d.nextActivity.targetSkill)}` : "لا توصية تالية بعد"}</div>
     <button class="link" type="button" id="teacher-report-back">← عودة إلى قائمة المراجعة</button>`;
   $("teacher-report-back").addEventListener("click", () => renderStaffDashboard(role));
+}
+
+async function renderParentDashboard() {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  $("portal-meta").textContent = `الدور (من الهوية الموثقة): ${role}`;
+  show("view-portal-home");
+  const panel = $("portal-capability-panel");
+  panel.innerHTML = `<div class="muted small">جارٍ تحميل بيانات الأبناء الحقيقية…</div>`;
+  const r = await api("GET", "/v1/parents/children");
+  if (r.status === 401 && (await refreshIfPossible())) return renderParentDashboard();
+  if (r.status === 403) {
+    panel.innerHTML = `<div class="error">403 — غير مصرح: الحماية الحقيقية من الـ API وليس من الواجهة.</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    panel.innerHTML = `<div class="error">تعذر تحميل قائمة الأبناء (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+    return;
+  }
+  const children = Array.isArray(r.json?.children) ? r.json.children : [];
+  panel.innerHTML = `
+    <div class="stat"><span class="muted small">الأبناء المرتبطون (حقيقي من /v1/parents/children — ربط ولي↔طالب)</span><b>${children.length}</b></div>
+    ${children.length === 0 ? `<div class="muted small">لا أبناء مرتبطين بهذا الحساب بعد (قائمة حقيقية — لا بيانات وهمية).</div>` : children.map((ch) => `
+      <div class="item" data-parent-child="${esc(ch.studentId)}">👨‍🎓 <b>${esc(ch.firstName)} ${esc(ch.lastName)}</b> <span class="muted small">${esc(ch.studentCode)}</span>
+        <button class="link" type="button" data-child-report="${esc(ch.studentId)}">متابعة تقدم الابن (تقرير حقيقي)</button></div>`).join("")}
+    <div class="muted small">التواصل والإشعارات: قدرات مرحلة لاحقة وفق خارطة الطريق (PHASE-11) — لا بيانات وهمية هنا.</div>`;
+  panel.querySelectorAll("[data-child-report]").forEach((b) =>
+    b.addEventListener("click", () => renderChildReport(b.dataset.childReport)));
+}
+
+async function renderChildReport(studentId) {
+  const role = currentRole();
+  $("portal-title").textContent = PORTAL_TITLES[role] ?? "البوابة";
+  $("portal-meta").textContent = `متابعة تقدم الابن — تقرير حقيقي بصلاحية الولي (PHASE-8) · ${studentId}`;
+  show("view-portal-home");
+  const panel = $("portal-capability-panel");
+  panel.innerHTML = `<div class="muted small">جارٍ تحميل التقرير الحقيقي…</div>`;
+  const r = await api("GET", `/v1/parents/children/${studentId}/dashboard`);
+  if (r.status === 401 && (await refreshIfPossible())) return renderChildReport(studentId);
+  if (r.status === 403) {
+    panel.innerHTML = `<div class="error">403 — غير مصرح: الربط ولي↔طالب هو الحد الحقيقي (API) وليس الواجهة.</div>`;
+    return;
+  }
+  if (r.status === 404) {
+    panel.innerHTML = `<div class="error">404 — الطالب غير موجود في نطاق مستأجرك (عزل المستأجر الحقيقي من PHASE-2).</div>`;
+    return;
+  }
+  if (r.status !== 200) {
+    panel.innerHTML = `<div class="error">تعذر تحميل تقرير الابن (${r.status}): ${esc(r.json?.error?.message ?? r.json?.error ?? "")} — لا بيانات وهمية.</div>`;
+    return;
+  }
+  const d = r.json;
+  const mastery = (d.mastery ?? []).map((m) => `<div class="item">🏅 <b>${esc(m.subject ?? m.skill ?? "")}</b> — ${esc(m.level)} · درجة ${esc(m.score ?? "—")}</div>`).join("");
+  const recs = (d.recommendations ?? []).map((x) => `<div class="item">🔁 ${esc(x.proposedActivityType)} · ${esc(x.currentSkill)} → ${esc(x.targetSkill)}</div>`).join("");
+  panel.innerHTML = `
+    <div class="stat"><span class="muted small">أدلة مسجلة (حقيقية)</span><b>${d.progress?.evidenceCount ?? 0}</b></div>
+    <div class="stat"><span class="muted small">نقاط قوة</span><b>${d.strengths?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">نقاط ضعف</span><b>${d.weaknesses?.length ?? 0}</b></div>
+    <div class="stat"><span class="muted small">فجوات</span><b>${d.gaps?.length ?? 0}</b></div>
+    ${(d.mastery ?? []).length === 0 ? `<div class="muted small">لا سجلات إتقان بعد (بيانات حقيقية — لا وهمية).</div>` : mastery}
+    ${recs || `<div class="muted small">لا توصيات حاليًا.</div>`}
+    <div class="muted small">التوصية التالية: ${d.nextActivity ? `${esc(d.nextActivity.proposedActivityType)} — ${esc(d.nextActivity.currentSkill)} → ${esc(d.nextActivity.targetSkill)}` : "لا توصية تالية بعد"}</div>
+    <button class="link" type="button" id="parent-report-back">← عودة إلى الأبناء</button>`;
+  $("parent-report-back").addEventListener("click", () => renderParentDashboard());
 }
 
 function renderPortalPlaceholder(role, cap) {

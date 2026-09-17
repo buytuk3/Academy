@@ -171,12 +171,11 @@ d("PHASE-3 — Role-aware portal shell (real browser + real API + real auth)", (
     await page.close();
   });
 
-  it("P3-3 [Parent]: parent JWT routes to the Parent portal root; dashboard is an explicit placeholder", async () => {
+  it("P3-3 [Parent]: parent JWT routes to the Parent portal root (PHASE-8: the root is now the REAL children view — evolved from the PHASE-3 placeholder per approved roadmap)", async () => {
     const page = await browser!.newPage();
     await staffLogin(page, PARENT_A.email);
-    await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
-    expect(await page.textContent("#portal-placeholder-title")).toContain(PORTAL_TITLES.parent);
-    expect(await page.textContent("#portal-placeholder-text")).toContain("غير مدعومة بعد");
+    await page.waitForSelector("#view-portal-home:not(.hidden)");
+    expect(await page.textContent("#portal-title")).toContain(PORTAL_TITLES.parent);
     expect(await page.getAttribute("#portal-nav", "data-role")).toBe("parent");
     await page.close();
   });
@@ -218,7 +217,7 @@ d("PHASE-3 — Role-aware portal shell (real browser + real API + real auth)", (
   it("P3-8 [403]: parent token is rejected by the teacher capability (403 — not UI hiding)", async () => {
     const page = await browser!.newPage();
     await staffLogin(page, PARENT_A.email);
-    await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
+    await page.waitForSelector("#view-portal-home:not(.hidden)");
     const token = await sessionToken(page);
     const status = await page.evaluate(
       async (t) => fetch("/v1/teacher/review-queue", { headers: { Authorization: `Bearer ${t}` } }).then((r) => r.status),

@@ -17,5 +17,6 @@ export * from "./reading";
 export * from "./evidence";
 export * from "./events";
 export * from "./learning-loop";
+export * from "./parents";
 export * from "./content-library";
 export * from "./activity-state";

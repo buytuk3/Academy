@@ -211,7 +211,7 @@ d("PHASE-7 — Teacher capabilities: review/report/remediation gates (real brows
   it("P7-3 [RBAC]: parent JWT is DENIED on the report surface (real backend boundary — not UI hiding)", async () => {
     const page = await browser!.newPage();
     await staffLogin(page, PARENT_A.email);
-    await page.waitForSelector("#view-portal-placeholder:not(.hidden)");
+    await page.waitForSelector("#view-portal-home:not(.hidden)");
     const token = await sessionToken(page);
     const status = await page.evaluate(
       async ({ t, tenant, student }) =>

@@ -27,6 +27,8 @@ export { canAccessContent, DEFAULT_RELIGIOUS_ACCESS_POLICY } from "./oversight/a
 export type { ReligiousAccessPolicyConfig, StudentReligiousContext, EducationalAccessContext, CanAccessContentDeps } from "./oversight/access-policy.js";
 export { validateStudentLoginContext, LoginContextError } from "./oversight/login-context.js";
 export { aggregateEvidence, assertStudentDetailAccess } from "./oversight/aggregation.js";
+export { assertParentStudentAccess, listParentChildren } from "./parents/visibility.js";
+export type { ParentChildSummary } from "./parents/visibility.js";
 export { SENSITIVITY_LEVELS, OVERSIGHT_SCOPE_TYPES, DEFAULT_MIN_AGGREGATION_SIZE, DEFAULT_MIN_SAMPLES_HIGH, DEFAULT_MIN_SAMPLES_MEDIUM } from "./oversight/contracts.js";
 export type { AggregateRequest, AggregateResult, AggregateMetric, SensitivityLevel, OversightScopeType, ConfidenceBand, TrendDirection, EducationalContentRef, ContentAccessDecision, StudentLoginContextInput, StudentLoginContextResult } from "./oversight/contracts.js";
 export { createOrganization, attachParent, ancestorChain, descendantOrganizationIds, createSchool, attachSchoolToOrganization, addStaffMembership, changeStaffScope, endStaffMembership, checkScope } from "./org/organization.js";

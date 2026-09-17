@@ -12,6 +12,7 @@ import students from "./students.js";
 import oversight from "./oversight.js";
 import teacher from "./teacher.js";
 import lessons from "./lessons.js";
+import parents from "./parents.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(students);
 router.use(oversight);
 router.use(teacher);
 router.use(lessons);
+router.use(parents);
 
 export default router;
