@@ -22,6 +22,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthCheckResponse'
+  /metrics:
+    get:
+      operationId: getRootMetrics
+      summary: 'PHASE-12: Prometheus exposition at the root (alias of /api/metrics — same registry)'
+      responses:
+        '200':
+          description: Prometheus text format
+        '401': { description: Unauthenticated }
   /api/health:
     get:
       operationId: getHealth

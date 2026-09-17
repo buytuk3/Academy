@@ -5,9 +5,10 @@ import rateLimit from "express-rate-limit";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "@workspace/config";
-import { createLogger, requestContext, httpLogger } from "@workspace/observability";
+import { createLogger, requestContext, httpLogger, getMetrics } from "@workspace/observability";
 import router from "./routes/index.js";
 import healthRouter from "./routes/health.js";
+import metricsRouter from "./routes/metrics.js";
 import v1Router from "./v1/index.js";
 
 const app: Express = express();
@@ -50,6 +51,17 @@ const authRateLimiter = rateLimit({
   message: { error: { code: "AUTH_RATE_LIMITED", message: "Too many authentication attempts" } },
 });
 app.use(["/api/auth", "/v1/auth"], authRateLimiter as any);
+
+// PHASE-12 (OBS-1): REAL traffic into the canonical counter — one increment
+// per completed request (route=path, status), reuse-only (no new metrics).
+const appMetrics = getMetrics();
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    try { appMetrics.httpRequests.inc({ route: req.path, status: String(res.statusCode) }); } catch {}
+  });
+  next();
+});
+app.use("/", metricsRouter);
 
 // PHASE-4 (API-GATEWAY-ALIGNMENT): root liveness alias — GET /healthz is
 // documented at the root in lib/api-spec/openapi.yaml; same single handler

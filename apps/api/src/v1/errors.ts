@@ -11,6 +11,7 @@ import {
   ContentLibraryError,
   ActivityStateError,
 } from "@workspace/db";
+import { createLogger, getMetrics, recordSecurityEvent } from "@workspace/observability";
 
 const CONTENT_404 = new Set([
   "CONTENT_NOT_FOUND_IN_TENANT",
@@ -42,6 +43,13 @@ const ACTIVITY_409 = new Set([
 const CLASSIFIED_409 = new Set(["DECISION_ALREADY_FINAL", "DECISION_CANNOT_REMAIN_PENDING"]);
 const CLASSIFIED_404 = new Set(["INTERVENTION_NOT_FOUND"]);
 
+const secLog = createLogger({ name: "buytuk-api:errors" });
+
+/** PHASE-12 (OBS-2): real 403-class denials surface on the canonical security counter. */
+function noteSecurityDenial(reason: string, status: number): void {
+  if (status === 403) recordSecurityEvent(secLog, getMetrics(), "authorization-failure", { detail: reason });
+}
+
 /** ApiError envelope (OpenAPI components/schemas/ApiError) with request tracing. */
 export function apiError(res: Response, status: number, code: string, message: string): void {
   const ctx = getContext();
@@ -66,6 +74,7 @@ export function mapCapabilityError(res: Response, e: unknown): boolean {
     return true;
   }
   if (e instanceof AuthCapabilityError) {
+    noteSecurityDenial(e.reason, e.status);
     apiError(res, e.status, e.reason, e.reason);
     return true;
   }
@@ -82,6 +91,7 @@ export function mapCapabilityError(res: Response, e: unknown): boolean {
   // AuthorizationError (oversight detail gate): NOT_FOUND reasons → 404, denials → 403.
   if (e instanceof Error && e.name === "AuthorizationError") {
     const status = e.message.includes("NOT_FOUND") ? 404 : 403;
+    noteSecurityDenial(e.message, status);
     apiError(res, status, e.message, e.message);
     return true;
   }
