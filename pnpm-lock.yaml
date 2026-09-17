@@ -137,6 +137,12 @@ importers:
       '@buytuk/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@grpc/grpc-js':
+        specifier: 1.14.4
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: 0.7.15
+        version: 0.7.15
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
