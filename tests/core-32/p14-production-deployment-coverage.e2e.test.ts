@@ -101,7 +101,7 @@ d("PHASE-14 — production deployment target + coverage gates", () => {
   it("P14-5 [governance]: STAGE_STATUS PHASE-14 CLOSED/PASS (with DEPL-2 disclosure) + CDR coverage row CLOSED at PHASE-14 + PROJECT_VERSION 1.17", () => {
     const ss = readFileSync(`${root}docs/buytuk-master/STAGE_STATUS.md`, "utf8");
     expect(ss).toMatch(/PHASE-14[^\n]*CLOSED \/ PASS/);
-    expect(ss).toContain("DEPLOYMENT-TARGET-AND-COVERAGE");
+    expect(ss).toContain("PRODUCTION-DEPLOYMENT-CLOSURE"); // official name per binding roadmap (2026-09-18)
     const cdr = readFileSync(`${root}docs/buytuk-master/CHANGE_DEVIATION_RECORD.md`, "utf8");
     expect(cdr).toMatch(/RESOLVED at the PHASE-14 closeout[^\n]*coverage/i);
     const pv = readFileSync(`${root}docs/reference/PROJECT_VERSION.md`, "utf8");

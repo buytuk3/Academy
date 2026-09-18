@@ -26,6 +26,6 @@ All values from real commands in the PHASE-14 session (raw logs: /home/user/phas
 | COV-1 official gate (thresholds enforced, v8 provider) | lines 40.41%≥40% · functions 12.82%≥10% · statements 40.41%≥40% · branches 55.00%≥55% | PASS | e3fdeb1 |
 | DEPL-2 container target (pinned multi-stage Dockerfile+runbook; LIVE deployment stays OPEN disclosed — no docker daemon/no external host, never claimed) | target delivered; live = OPEN | DISCLOSED | 2d692be |
 | secret-diff (hits) | 0 | PASS | close |
-| secret-tree (hits) | 0 | PASS | close |
+| secret-tree (new real secrets) | 0 — 5 pre-existing test-fixture matches classified (docs/evidence/PHASE-14/secret-tree-classification.txt) | PASS | close |
 | diff --check | clean | PASS | close |
-| P14 E2E gate (5 tests, real built-artifact boot + /metrics + contracts + coverage evidence + governance) | 5/5 | PENDING | close |
+| P14 E2E gate (5 tests, real built-artifact boot + /metrics + contracts + coverage evidence + governance) | 5/5 | PASS | close |
