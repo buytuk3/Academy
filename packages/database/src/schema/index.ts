@@ -21,3 +21,6 @@ export * from "./parents";
 export * from "./content-library";
 export * from "./activity-state";
 export * from "./engagement";
+
+// PHASE-15 — school onboarding + teacher assignment (§3.1/§3.2)
+export * from "./onboarding.js";
