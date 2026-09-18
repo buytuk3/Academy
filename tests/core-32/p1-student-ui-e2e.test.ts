@@ -1,3 +1,7 @@
+// PHASE-14 scoped matrix condition (p1-only): this file performs 5 legit real-browser logins
+// inside one 60s window; the shared default (3/IP) 429s P1-5 mid-loop (stray-window flake).
+// Raise the budget for THIS file only; auth-sec keeps MAX=3 and still asserts the real 429 path.
+process.env.AUTH_RATE_LIMIT_MAX = "10";
 /**
  * CORE-32 / P1 — Student Web UI E2E (REAL BROWSER = Playwright Chromium).
  *
