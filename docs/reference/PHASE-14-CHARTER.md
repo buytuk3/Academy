@@ -1,0 +1,14 @@
+# PHASE-14 CHARTER — PRODUCTION-DEPLOYMENT-CLOSURE (official; gates fixed in advance)
+
+Base: verified BuyTuk Academy 1.16 archive (sha256 `38660ec5…cca41d`, 458,915,497 B) → live repo
+`e7bf305` (documented intermediate per the management ruling of 2026-09-18; dirty=0; descendant of 1.16 — no parallel branches, no memory-based adoption).
+
+**Binding preamble rule (DEV-014):** every closeout of this and later phases must state in its preamble:
+"PHASE-13 remains open awaiting a GPU environment — this closure does not include audio-AI proof (DEP-001 stays NOT VERIFIED)."
+
+## Gates (fixed in advance — OPEN gates never PASS)
+- **COV-1 (coverage provider)** — `@vitest/coverage-v8@1.6.1` (store-exact, dev-only, root co-located with the runner; ADR-035 documents the zero-new-dependencies exception). Evidence committed (`docs/evidence/PHASE-14/coverage-summary.json`, `coverage-thresholds.json`); official gate = coverage run with thresholds enforced at the measured floor (lines 40 / functions 10 / statements 40 / branches 55) — exit 0 required this phase.
+- **DEPL-2 (deployment target)** — single-container production target: pinned multi-stage `deploy/Dockerfile` (node:22-bookworm-slim, non-root `USER node`, HEALTHCHECK /healthz, canonical start cmd) + `.dockerignore` + `deploy/DEPLOYMENT-RUNBOOK.md` (canonical env contract PORT/DATABASE_URL/JWT_SECRET/AUDIO_KEK/REDIS_URL/INFERENCE_GATEWAY_URL). The LIVE external deployment stays **OPEN, disclosed** — sandbox reality: docker CLI 29.1.3 present but the daemon cannot start (kernel NAT-chain restriction) and no external host exists. Never claimed.
+- **P14-E2E** — `tests/core-32/p14-production-deployment-coverage.e2e.test.ts` (5 tests, real processes/files): P14-1 cold boot of the BUILT artifact + 200 /healthz ≤ 5 s; P14-2 /metrics + /api/metrics exposition continuity; P14-3 container-target contract + honest runbook disclosure; P14-4 committed coverage evidence ≥ enforced thresholds; P14-5 governance alignment (STAGE CLOSED/PASS + CDR coverage row CLOSED at PHASE-14 + PROJECT_VERSION 1.17).
+- **REG-0** — zero regressions: typecheck, build, db/obs/worker/api/engine suites, ALL core-32 official files per-file (p1…p11 + auth-sec + p14), E1, E4, secret scans, diff-check — all exit 0. The p1 anomaly recorded on 2026-09-17 (browser-login timeout after an interrupted coverage run — suspected stray rate-limit keys) must be re-proven: p1 solo 5/5 on a clean Redis.
+- **Closeout** — STAGE_STATUS (PHASE-14 CLOSED/PASS + DEV-014 preamble disclosure), CHANGE_DEVIATION_RECORD (coverage row CLOSED at PHASE-14), PROJECT_VERSION (BuyTuk Academy 1.17), standalone closeout report, gates ledger, raw exit codes, and the new single-file reference **BuyTuk Academy 1.17** via D-3/D-12 (sha256 + exact size + `tar -tzf` verified BEFORE any link is shared).
