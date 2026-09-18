@@ -52,17 +52,25 @@ Reason:
 - it blocks trustworthy full-repo proof,
 - and it is the top item in the dependency order.
 
-## BINDING ROADMAP — PHASE-13..PHASE-18 (management decision, 2026-09-18 — supersedes any prior PHASE-13+ ordering)
+## BINDING ROADMAP — governing doc v2.1 (management decision 2026-09-18 — supersedes the morning PHASE-13..18 map; renumbering recorded as DEV-015 in CDR)
 
-Governing rules for every phase (no exceptions): (1) build ONLY on the last closed, byte-verified approved reference — never from memory, no parallel branches; (2) reuse-first — any new dependency or architectural change requires an ADR stating the reason and the rejected alternatives; (3) closure requires a new REAL E2E gate (tests/core-32/pXX-*.e2e.test.ts) + zero regressions (official matrix incl. per-file core-32 + E1 + E4 + secret scans + diff-check); (4) documentation: STAGE_STATUS.md + CHANGE_DEVIATION_RECORD + PROJECT_VERSION.md + a standalone closeout report; (5) new reference archive: single file, trusted external channel, VERIFIED proof (SHA-256 + exact size + tar -tzf) BEFORE sharing the link; (6) mandatory stop: never start the next phase before explicit management approval of the current phase's closeout report.
+Governing rules per phase (unchanged): build ONLY on the last closed byte-verified reference; reuse-first with an ADR for any deviation; a new REAL E2E gate per phase; zero regressions (official matrix + E1 + E4 + secret scans + diff-check); full documentation (STAGE_STATUS/CDR/PROJECT_VERSION + closeout); verified single-file reference (D-3/D-12) BEFORE any link; explicit management approval gates every next phase.
 
-| Phase | Objective | Dependencies / notes |
+| Phase | Name | Status / dependencies |
 |---|---|---|
-| **PHASE-13 (highest priority)** | AI-RUNTIME-PROOF — closes DEP-001: run inference-gateway (gateway.py + workers/whisper_worker.py + workers/alignment_worker.py) on a REAL GPU/CUDA environment; real Whisper on ≥10 REAL Arabic audio samples with measured WER; phoneme-level forced-alignment + Arabic G2P proof; full path via the existing queue to a real student with real analysis evidence. Mandatory disclosure if no GPU (document + request environment — never claim success without real audio evidence attached) | none — starts first |
-| PHASE-14 | PRODUCTION-DEPLOYMENT-CLOSURE — real external deployment target (≥1 container) + @vitest/coverage-v8 provider (documented exception: measurement tooling, no production-logic change) | after PHASE-13 explicit approval |
-| PHASE-15 | STUDENT-ENGAGEMENT-EXTRAS — points-store spend + student notes + support; reuse wallet_ledger/messages from migration 0009 | after PHASE-14 approval |
-| PHASE-16 | NOTIFICATIONS — real email/in-app over existing messages/observability | after PHASE-15 approval |
-| PHASE-17 | EXAMS-MODULE — independent of exercises/assessment-engine; new migration only with a mandatory ADR | after PHASE-16 approval |
-| PHASE-18 | CI/CD-AND-LOAD-TESTING — GitHub Actions + k6 (infrastructure tooling only, no app-code changes) | after PHASE-17 approval |
+| PHASE-13 | AI-RUNTIME-PROOF (DEP-001) | OPEN — BLOCKED on GPU environment (DEV-014); never closes without real audio evidence |
+| PHASE-14 | PRODUCTION-DEPLOYMENT-CLOSURE (DEPL-2 + COV-1) | CLOSED / PASS — reference 1.17 @ `9425131` |
+| PHASE-15 | SCHOOL-ONBOARDING-AND-TEACHER-ASSIGNMENT (§3.1+§3.2) | CLOSED / PASS — reference 1.18 (this phase; highest commercial priority block with 16-17) |
+| PHASE-16 | INTERACTION-EVENT-LOG (§3.3) | after PHASE-15 approval |
+| PHASE-17 | PROVISIONAL-ADVANCE-MASTERY-MODEL (§3.4) | after PHASE-16 approval |
+| PHASE-18 | SPACED-REVIEW-ENGINE (§3.5) | after PHASE-16 approval |
+| PHASE-19 | CROSS-STAGE-ESCALATION-ENGINE (§3.6) | after PHASE-17 approval |
+| PHASE-20 | GRAMMAR-PARSING-ENGINE / الإعراب (§3.7) | no structural dependencies (own ADR mandatory) |
+| PHASE-21 | EXAM-BEHAVIORAL-ANALYTICS (§3.9) | after PHASE-16 approval |
+| PHASE-22 | VIDEO-LESSON-CONTENT (§3.8) | no structural dependencies (own ADR mandatory) |
+| PHASE-23 | STUDENT-ENGAGEMENT-EXTRAS (renumbered) | after PHASE-14 approval |
+| PHASE-24 | NOTIFICATIONS | after PHASE-14 approval |
+| PHASE-25 | EXAMS-MODULE | after PHASE-14 approval |
+| PHASE-26 | CI/CD-AND-LOAD-TESTING | after PHASE-14 approval |
 
-Note (2026-09-18): PHASE-14 groundwork (coverage provider + container target, commits bfeeaf9/e3fdeb1/2d692be) landed under the superseded numbering and is reattributed to PHASE-14; git history is not rewritten.
+Commercial-priority note (v2.1): PHASE-15..17 enable the real pilot with the 120 founding teachers without waiting for PHASE-13 (GPU).
