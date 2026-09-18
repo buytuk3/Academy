@@ -32,8 +32,8 @@ whisper_worker.py
 2
 Mem:               1           0           0           0           1           1
 --- [8] outbound network (bounded 6s each) ---
-HTTP/2 200 
-HTTP/2 200 
+HTTP/2 200
+HTTP/2 200
 --- [9] probe doc existence check ---
 ls: cannot access 'docs/reference/PHASE-13-CAPABILITY-PROBE-2026-09-18.md': No such file or directory
 ```
