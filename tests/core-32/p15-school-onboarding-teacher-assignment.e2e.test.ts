@@ -243,11 +243,17 @@ d("PHASE-15 — school onboarding + teacher claim engine (real app + real PG/Red
     expect(dup.status).toBe(200);
     expect(dup.body.existed).toBe(true);
 
-    // override on an OPEN slot is rejected (nothing to override)
-    const engSlot = (slots.body.items as Array<{ subject: string; claimStatus: string; id: string }>)
-      .find((s) => s.subject === "English");
+    // override on an OPEN slot is rejected (nothing to override): "Arabic" is
+    // ensured but never claimed by anyone (English got claimed in P15-3)
+    const ensureAr = await api("POST", "/v1/teaching-slots/ensure", PRINCIPAL.token,
+      { schoolId: S1, subjects: ["Arabic"] });
+    expect(ensureAr.status).toBe(201);
+    const slotsAfter = await api("GET", `/v1/teaching-slots?schoolId=${S1}`, PRINCIPAL.token);
+    const openSlot = (slotsAfter.body.items as Array<{ subject: string; claimStatus: string; id: string }>)
+      .find((s) => s.subject === "Arabic");
+    expect(openSlot?.claimStatus).toBe("OPEN");
     const bad = await api("POST", "/v1/teaching-slot-overrides", PRINCIPAL.token,
-      { slotId: engSlot!.id, teacherId: T3.sub, roleLabel: "SPECIALIST", reason: "خانة مفتوحة أصلاً" }, `p15-ovr-${randomUUID()}`);
+      { slotId: openSlot!.id, teacherId: T3.sub, roleLabel: "SPECIALIST", reason: "خانة مفتوحة أصلاً" }, `p15-ovr-${randomUUID()}`);
     expect(bad.status).toBe(409);
     expect(bad.body?.error?.code).toBe("OVERRIDE_SLOT_NOT_CLAIMED");
   });
