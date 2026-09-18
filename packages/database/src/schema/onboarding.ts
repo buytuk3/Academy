@@ -1,9 +1,10 @@
-import { pgTable, text, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
 /**
- * PHASE-15 — SCHOOL-ONBOARDING-AND-TEACHER-ASSIGNMENT (charter §3.1 + §3.2).
- * Migration: 0010_phase15_school_onboarding_teacher_assignment.sql
- * RLS: enabled+forced per the 0007 mechanism (fail-closed, tenant-scoped).
+ * PHASE-15 — SCHOOL-ONBOARDING-AND-TEACHER-ASSIGNMENT (governing doc v2.1 §3.1+§3.2).
+ * Migration: 0010_phase15_school_onboarding_teacher_assignment.sql (the DDL
+ * source of truth — FKs + CHECKs live there). RLS: enabled+forced per the 0007
+ * mechanism (fail-closed, tenant-scoped). Config style mirrors engagement.ts.
  */
 
 /** §3.1 — pending-by-default school requests; approval = explicit decision. */
@@ -24,10 +25,10 @@ export const schoolRequestsTable = pgTable(
     operationKey: text("operation_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    uniqueIndex("school_requests_op_uniq").on(t.tenantId, t.operationKey),
-    index("school_requests_status_idx").on(t.tenantId, t.status),
-  ],
+  (t) => ({
+    opUniq: unique("school_requests_op_uniq").on(t.tenantId, t.operationKey),
+    statusIdx: index("school_requests_status_idx").on(t.tenantId, t.status),
+  }),
 );
 
 /** §3.2 — canonical subject×school slot; UNIQUE = the atomic lock. */
@@ -45,10 +46,10 @@ export const teachingSlotsTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
   },
-  (t) => [
-    uniqueIndex("teaching_slots_lock").on(t.tenantId, t.schoolId, t.subject),
-    index("teaching_slots_teacher_idx").on(t.tenantId, t.claimedBy),
-  ],
+  (t) => ({
+    slotLock: unique("teaching_slots_lock").on(t.tenantId, t.schoolId, t.subject),
+    teacherIdx: index("teaching_slots_teacher_idx").on(t.tenantId, t.claimedBy),
+  }),
 );
 
 /** §3.2 — principal-authorized second-teacher exception (audited). */
@@ -65,5 +66,7 @@ export const teachingSlotOverridesTable = pgTable(
     operationKey: text("operation_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("teaching_slot_overrides_op_uniq").on(t.tenantId, t.operationKey)],
+  (t) => ({
+    opUniq: unique("teaching_slot_overrides_op_uniq").on(t.tenantId, t.operationKey),
+  }),
 );

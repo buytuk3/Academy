@@ -114,3 +114,8 @@ export { markAttendance, listAttendanceForStaff } from "./engagement/attendance.
 export { rateStudent, listRatingsForStaff } from "./engagement/ratings.js";
 export type { RatingView } from "./engagement/ratings.js";
 export type { AttendanceView, AttendanceStatus } from "./engagement/attendance.js";
+
+// PHASE-15 — school onboarding + teacher assignment (§3.1/§3.2)
+export { OnboardingCapabilityError } from "./onboarding/capability.js";
+export { createSchoolRequest, listSchoolRequests, decideSchoolRequest, ensureTeachingSlots,
+  listTeachingSlots, claimTeachingSlot, grantSlotOverride, listTenantSchools } from "./onboarding/capability.js";
