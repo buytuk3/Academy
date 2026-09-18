@@ -1,5 +1,7 @@
 # ADR-035 — COV-1 coverage provider: measured dev-only exception (@vitest/coverage-v8@1.6.1)
 
+> **Amendment (2026-09-18):** the binding roadmap (docs/buytuk-master/MASTER_ROADMAP.md) reattributed DEPLOYMENT-TARGET-AND-COVERAGE work to **PHASE-14 (PRODUCTION-DEPLOYMENT-CLOSURE)**; evidence paths now live under `docs/evidence/PHASE-14/`. This ADR's substance is unchanged.
+
 - Date: 2026-09-17 · Phase: PHASE-13 (DEPLOYMENT-TARGET-AND-COVERAGE) · Status: ACCEPTED
 - Base: BuyTuk Academy 1.16 @ `f249e63` (archive sha256 `38660ec5…cca41d`)
 
@@ -20,7 +22,7 @@ canonical test runner and a coverage provider is a measurement tool, not applica
    every package is unchanged — zero regression by construction.
 3. Measure FIRST, then enforce: thresholds = the measured floor of the real run
    (rounded down to 5), committed with the raw evidence
-   (`docs/evidence/PHASE-13/coverage-summary.json`, `coverage-thresholds.json`).
+   (`docs/evidence/PHASE-14/coverage-summary.json`, `coverage-thresholds.json`).
    The official COV-1 gate runs with thresholds enforced (exit 0 required).
 
 ## Why this does not violate zero-new-dependencies

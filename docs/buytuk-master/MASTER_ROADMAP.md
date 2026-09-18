@@ -51,3 +51,18 @@ Reason:
 - root build is currently failing in verified evidence,
 - it blocks trustworthy full-repo proof,
 - and it is the top item in the dependency order.
+
+## BINDING ROADMAP — PHASE-13..PHASE-18 (management decision, 2026-09-18 — supersedes any prior PHASE-13+ ordering)
+
+Governing rules for every phase (no exceptions): (1) build ONLY on the last closed, byte-verified approved reference — never from memory, no parallel branches; (2) reuse-first — any new dependency or architectural change requires an ADR stating the reason and the rejected alternatives; (3) closure requires a new REAL E2E gate (tests/core-32/pXX-*.e2e.test.ts) + zero regressions (official matrix incl. per-file core-32 + E1 + E4 + secret scans + diff-check); (4) documentation: STAGE_STATUS.md + CHANGE_DEVIATION_RECORD + PROJECT_VERSION.md + a standalone closeout report; (5) new reference archive: single file, trusted external channel, VERIFIED proof (SHA-256 + exact size + tar -tzf) BEFORE sharing the link; (6) mandatory stop: never start the next phase before explicit management approval of the current phase's closeout report.
+
+| Phase | Objective | Dependencies / notes |
+|---|---|---|
+| **PHASE-13 (highest priority)** | AI-RUNTIME-PROOF — closes DEP-001: run inference-gateway (gateway.py + workers/whisper_worker.py + workers/alignment_worker.py) on a REAL GPU/CUDA environment; real Whisper on ≥10 REAL Arabic audio samples with measured WER; phoneme-level forced-alignment + Arabic G2P proof; full path via the existing queue to a real student with real analysis evidence. Mandatory disclosure if no GPU (document + request environment — never claim success without real audio evidence attached) | none — starts first |
+| PHASE-14 | PRODUCTION-DEPLOYMENT-CLOSURE — real external deployment target (≥1 container) + @vitest/coverage-v8 provider (documented exception: measurement tooling, no production-logic change) | after PHASE-13 explicit approval |
+| PHASE-15 | STUDENT-ENGAGEMENT-EXTRAS — points-store spend + student notes + support; reuse wallet_ledger/messages from migration 0009 | after PHASE-14 approval |
+| PHASE-16 | NOTIFICATIONS — real email/in-app over existing messages/observability | after PHASE-15 approval |
+| PHASE-17 | EXAMS-MODULE — independent of exercises/assessment-engine; new migration only with a mandatory ADR | after PHASE-16 approval |
+| PHASE-18 | CI/CD-AND-LOAD-TESTING — GitHub Actions + k6 (infrastructure tooling only, no app-code changes) | after PHASE-17 approval |
+
+Note (2026-09-18): PHASE-14 groundwork (coverage provider + container target, commits bfeeaf9/e3fdeb1/2d692be) landed under the superseded numbering and is reattributed to PHASE-14; git history is not rewritten.
