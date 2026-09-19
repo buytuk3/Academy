@@ -122,6 +122,12 @@ beforeAll(async () => {
   EXERCISE_NUM = ex.exercise.id;
   await dbmod.publishExercise(TENANT_A, EXERCISE_NUM, PRINCIPAL.sub);
 
+
+  const { default: app } = await import("../../apps/api/src/app.js");
+  server = app.listen(0, () => {
+    base = `http://127.0.0.1:${(server!.address() as AddressInfo).port}`;
+  });
+  await new Promise<void>((resolve) => server!.on("listening", resolve));
   // real staff logins — their LOGIN events carry studentId=null, so they sit
   // OUTSIDE every student-filtered assertion below (staff surface is role-gated).
   const la = await api("POST", "/v1/auth/login", { body: { email: TEACHER_A.email, password: "s3cretpass" } });
@@ -130,12 +136,6 @@ beforeAll(async () => {
   const lb = await api("POST", "/v1/auth/login", { body: { email: TEACHER_B.email, password: "s3cretpass" } });
   expect(lb.status).toBe(200);
   TEACHER_B.token = lb.json.accessToken;
-
-  const { default: app } = await import("../../apps/api/src/app.js");
-  server = app.listen(0, () => {
-    base = `http://127.0.0.1:${(server!.address() as AddressInfo).port}`;
-  });
-  await new Promise<void>((resolve) => server!.on("listening", resolve));
 });
 
 d("PHASE-16 — interaction event log over real HTTP + real PG (§3.3)", () => {
