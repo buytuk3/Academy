@@ -58,7 +58,6 @@ Governing rules per phase (unchanged): build ONLY on the last closed byte-verifi
 
 | Phase | Name | Status / dependencies |
 |---|---|---|
-| PHASE-13 | AI-RUNTIME-PROOF (DEP-001) | **MOVED TO LAST (management ruling 2026-09-19)** — executes AFTER PHASE-26 closes; one consolidated GPU budget (approved $3–5) for a single final comprehensive proof on RunPod; never closes without real audio evidence (DEV-014 continues to apply until then) |
 | PHASE-14 | PRODUCTION-DEPLOYMENT-CLOSURE (DEPL-2 + COV-1) | CLOSED / PASS — reference 1.17 @ `9425131` |
 | PHASE-15 | SCHOOL-ONBOARDING-AND-TEACHER-ASSIGNMENT (§3.1+§3.2) | CLOSED / PASS — reference 1.18 (this phase; highest commercial priority block with 16-17) |
 | PHASE-16 | INTERACTION-EVENT-LOG (§3.3) | after PHASE-15 approval |
@@ -72,6 +71,7 @@ Governing rules per phase (unchanged): build ONLY on the last closed byte-verifi
 | PHASE-24 | NOTIFICATIONS | after PHASE-14 approval |
 | PHASE-25 | EXAMS-MODULE | after PHASE-14 approval |
 | PHASE-26 | CI/CD-AND-LOAD-TESTING | after PHASE-14 approval |
+| PHASE-13 | AI-RUNTIME-PROOF (DEP-001) | **MOVED TO LAST (management ruling 2026-09-19)** — executes AFTER PHASE-26 closes; one consolidated GPU budget (approved $3–5) for a single final comprehensive proof on RunPod; never closes without real audio evidence (DEV-014 continues to apply until then) |
 Final sequencing ruling (management decision 2026-09-19, binding): PHASE-13 (AI-RUNTIME-PROOF) is moved to the END of the roadmap — it runs after PHASE-26 closes, not in parallel; every phase that does not need a GPU completes first, then the limited GPU budget is spent on ONE final consolidated proof (RunPod, approved initial budget $3–5; environment provisioning tracked separately). PHASE-16 opens on reference 1.18 @ `baf4247`.
 
 
