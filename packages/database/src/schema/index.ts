@@ -27,3 +27,6 @@ export * from "./onboarding.js";
 
 // PHASE-16 — interaction events (§3.3)
 export * from "./interaction-events.js";
+
+// PHASE-17 — provisional-advance mastery model (§3.4)
+export * from "./provisional-advance.js";

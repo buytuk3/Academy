@@ -124,3 +124,10 @@ export { createSchoolRequest, listSchoolRequests, decideSchoolRequest, ensureTea
 export { InteractionCapabilityError } from "./interaction/capability.js";
 export { recordInteractionEvent, listInteractionEvents } from "./interaction/capability.js";
 export type { InteractionEventType, RecordInteractionEventInput, InteractionEventView } from "./interaction/capability.js";
+
+// PHASE-17 — provisional-advance mastery model (§3.4)
+export { ProvisionalAdvanceError } from "./provisional/capability.js";
+export { recordStageAttempt, listStageProgressions, getStageProgression } from "./provisional/capability.js";
+export { listStageAttemptFacts } from "./provisional/stage-attempts.js";
+export type { StageProgressionView, RecordStageAttemptInput, RecordStageAttemptResult, ProgressionStatus } from "./provisional/capability.js";
+export type { StageAttemptFact } from "./provisional/stage-attempts.js";

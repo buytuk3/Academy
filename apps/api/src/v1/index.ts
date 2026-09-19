@@ -17,6 +17,7 @@ import principal from "./principal.js";
 import engagement from "./engagement.js";
 import onboarding from "./onboarding.js";
 import interactionEvents from "./interaction-events.js";
+import provisionalAdvance from "./provisional-advance.js";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(principal);
 router.use(engagement);
 router.use(onboarding);
 router.use(interactionEvents);
+router.use(provisionalAdvance);
 
 export default router;
