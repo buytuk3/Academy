@@ -31,5 +31,13 @@ CREATE INDEX IF NOT EXISTS interaction_events_type_idx
 
 ALTER TABLE interaction_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interaction_events FORCE ROW LEVEL SECURITY;
-CREATE POLICY interaction_events_tenant_isolation ON interaction_events
-  USING (tenant_id = current_setting('app.tenant_id', true));
+-- idempotent policy creation (PostgreSQL has no CREATE POLICY IF NOT EXISTS)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies
+                 WHERE tablename = 'interaction_events'
+                   AND policyname = 'interaction_events_tenant_isolation') THEN
+    CREATE POLICY interaction_events_tenant_isolation ON interaction_events
+      USING (tenant_id = current_setting('app.tenant_id', true));
+  END IF;
+END $$;
