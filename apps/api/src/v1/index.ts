@@ -18,6 +18,7 @@ import engagement from "./engagement.js";
 import onboarding from "./onboarding.js";
 import interactionEvents from "./interaction-events.js";
 import provisionalAdvance from "./provisional-advance.js";
+import spacedReview from "./spaced-review.js";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(engagement);
 router.use(onboarding);
 router.use(interactionEvents);
 router.use(provisionalAdvance);
+router.use(spacedReview);
 
 export default router;

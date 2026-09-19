@@ -30,3 +30,6 @@ export * from "./interaction-events.js";
 
 // PHASE-17 — provisional-advance mastery model (§3.4)
 export * from "./provisional-advance.js";
+
+// PHASE-18 — spaced-review engine (§3.5)
+export * from "./spaced-review.js";

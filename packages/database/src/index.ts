@@ -131,3 +131,8 @@ export { recordStageAttempt, listStageProgressions, getStageProgression } from "
 export { listStageAttemptFacts } from "./provisional/stage-attempts.js";
 export type { StageProgressionView, RecordStageAttemptInput, RecordStageAttemptResult, ProgressionStatus } from "./provisional/capability.js";
 export type { StageAttemptFact } from "./provisional/stage-attempts.js";
+
+// PHASE-18 — spaced-review engine (§3.5)
+export { SpacedReviewError } from "./spaced/capability.js";
+export { refreshReviewSchedule, completeReview, listDueReviews, SPACED_INTERVAL_DAYS, SPACED_TOP_BOX } from "./spaced/capability.js";
+export type { ReviewItemView, CompleteReviewInput, CompleteReviewResult, ReviewItemStatus } from "./spaced/capability.js";
