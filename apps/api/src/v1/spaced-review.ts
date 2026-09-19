@@ -73,21 +73,6 @@ router.post("/spaced-review/refresh/:studentId", authenticate, authorize("teache
   }
 });
 
-// ===== GET /v1/spaced-review/:studentId/due (staff scope-checked) =====
-router.get("/spaced-review/:studentId/due", authenticate, authorize("teacher", "principal", "admin"), async (req: Request, res: Response) => {
-  const user = req.user as AuthUser;
-  if (!user?.tenantId) {
-    apiError(res, 403, "TENANT_CONTEXT_REQUIRED", "Authenticated tenant context missing");
-    return;
-  }
-  try {
-    const items = await listDueReviews({ tenantId: user.tenantId, studentId: paramStr(req.params.studentId) });
-    res.json({ items: items.map(itemView) });
-  } catch (e) {
-    if (!srError(res, e) && !mapCapabilityError(res, e)) throw e;
-  }
-});
-
 // ===== GET /v1/spaced-review/mine/due (student: OWN due queue) =====
 router.get("/spaced-review/mine/due", authenticate, authorize("student"), async (req: Request, res: Response) => {
   const user = req.user as AuthUser;
@@ -97,6 +82,21 @@ router.get("/spaced-review/mine/due", authenticate, authorize("student"), async 
   }
   try {
     const items = await listDueReviews({ tenantId: user.tenantId, studentId: user.studentId });
+    res.json({ items: items.map(itemView) });
+  } catch (e) {
+    if (!srError(res, e) && !mapCapabilityError(res, e)) throw e;
+  }
+});
+
+// ===== GET /v1/spaced-review/:studentId/due (staff scope-checked) =====
+router.get("/spaced-review/:studentId/due", authenticate, authorize("teacher", "principal", "admin"), async (req: Request, res: Response) => {
+  const user = req.user as AuthUser;
+  if (!user?.tenantId) {
+    apiError(res, 403, "TENANT_CONTEXT_REQUIRED", "Authenticated tenant context missing");
+    return;
+  }
+  try {
+    const items = await listDueReviews({ tenantId: user.tenantId, studentId: paramStr(req.params.studentId) });
     res.json({ items: items.map(itemView) });
   } catch (e) {
     if (!srError(res, e) && !mapCapabilityError(res, e)) throw e;
