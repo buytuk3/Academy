@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 /**
  * CORE-24 / Wave 3 — /v1 activity adapter (assignments + attempts).
  * THIN ADAPTER ONLY: Zod-validated requests → Activity STATE capability →

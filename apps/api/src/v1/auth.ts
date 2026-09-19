@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 /**
  * CORE-24 / Wave 3 — /v1/auth canonical adapter (owner-approved AUTH/CONTRACT
  * checkpoint decision, 2026-09-11).
