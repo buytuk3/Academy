@@ -41,7 +41,7 @@ afterAll(() => {
   server?.close();
 });
 
-interface ApiResult { status: number; body: any }
+interface ApiResult { status: number; body: any; json: any }
 async function api(method: string, path: string, opts: {
   body?: unknown; token?: string; tenant?: string; idempotencyKey?: string;
 } = {}): Promise<ApiResult> {
@@ -57,7 +57,7 @@ async function api(method: string, path: string, opts: {
   const text = await res.text();
   let json: any = null;
   try { json = text ? JSON.parse(text) : null; } catch { json = null; }
-  return { status: res.status, body: json };
+  return { status: res.status, body: json, json };
 }
 
 const opKey = (tag: string) => `p16-${tag}-${randomUUID()}`;

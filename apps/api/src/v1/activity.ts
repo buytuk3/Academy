@@ -187,7 +187,7 @@ router.post("/attempts", authenticate, async (req: Request, res: Response) => {
     });
     // PHASE-16 §3.3 (fire-and-forget): ATTEMPT_START — idempotent replays carry
     // the SAME operation_key, so the event stream collapses replays by design.
-    void logInteractionEvent({ tenantId: c.tenantId, actorId: c.sub, actorRole: c.role, eventType: "ATTEMPT_START", studentId, attemptId: started.attempt.id, operationKey: opKey ? `p16-att-start-${opKey}` : `p16-att-start-${randomUUID()}`, detail: { exerciseId: body.exerciseId ?? null, created: started.created } });
+    await logInteractionEvent({ tenantId: c.tenantId, actorId: c.sub, actorRole: c.role, eventType: "ATTEMPT_START", studentId, attemptId: started.attempt.id, operationKey: opKey ? `p16-att-start-${opKey}` : `p16-att-start-${randomUUID()}`, detail: { exerciseId: body.exerciseId ?? null, created: started.created } });
     // Contract: AttemptMutationResponse ({ attempt, created }) — 201 on create, 200 on retry.
     res.status(started.created ? 201 : 200).json({ attempt: toAttemptResponse(started.attempt), created: started.created });
   } catch (e) {
@@ -254,7 +254,7 @@ router.post("/attempts/:attemptId/submit", authenticate, async (req: Request, re
       return;
     }
     // PHASE-16 §3.3 (fire-and-forget): ATTEMPT_SUBMIT on the sync path.
-    void logInteractionEvent({ tenantId: c.tenantId, actorId: c.sub, actorRole: c.role, eventType: "ATTEMPT_SUBMIT", studentId, attemptId: paramStr(req.params.attemptId), operationKey: `p16-att-submit-${randomUUID()}`, detail: { mode: "sync", durationMs: body.durationMs ?? null } });
+    await logInteractionEvent({ tenantId: c.tenantId, actorId: c.sub, actorRole: c.role, eventType: "ATTEMPT_SUBMIT", studentId, attemptId: paramStr(req.params.attemptId), operationKey: `p16-att-submit-${randomUUID()}`, detail: { mode: "sync", durationMs: body.durationMs ?? null } });
     // ADR-027/V-3 — Learning Loop runtime call site #2 (sync engines:
     // NUMERACY / ASSESSMENT). Trigger: submitAttemptExecution RESOLVED —
     // canonical evidence is ALREADY persisted by the engine adapters

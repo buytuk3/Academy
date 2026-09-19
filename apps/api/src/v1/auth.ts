@@ -53,7 +53,7 @@ router.post("/auth/login", async (req: Request, res: Response) => {
   if (!body) return;
   try {
     const { user, tokens } = await loginWithPassword(body.email, body.password);
-    void logInteractionEvent({ tenantId: user.tenantId, actorId: user.id, actorRole: user.role, eventType: "LOGIN", operationKey: `p16-login-${randomUUID()}`, detail: { via: "password" } });
+    await logInteractionEvent({ tenantId: user.tenantId, actorId: user.id, actorRole: user.role, eventType: "LOGIN", operationKey: `p16-login-${randomUUID()}`, detail: { via: "password" } });
     res.json({ user: TOKEN_USER_FIELDS(user), ...tokens });
   } catch (e) {
     if (!mapCapabilityError(res, e)) throw e;
@@ -142,10 +142,10 @@ router.post("/auth/student-login", async (req: Request, res: Response) => {
       identityId: body.identityId,
       claimed: body.claimed,
     });
-    void logInteractionEvent({ tenantId, actorId: context.studentId, actorRole: "student", eventType: "LOGIN", studentId: context.studentId, schoolId: context.schoolId, classId: context.classId, operationKey: `p16-slogin-${randomUUID()}`, detail: { via: "identity" } });
+    await logInteractionEvent({ tenantId, actorId: context.studentId, actorRole: "student", eventType: "LOGIN", studentId: context.studentId, schoolId: context.schoolId, classId: context.classId, operationKey: `p16-slogin-${randomUUID()}`, detail: { via: "identity" } });
     res.json({ context, ...tokens });
   } catch (e) {
-    void logInteractionEvent({ tenantId, actorId: body.identityId, actorRole: "student", eventType: "LOGIN_FAILED", operationKey: `p16-slogin-fail-${randomUUID()}`, detail: { reason: e instanceof Error ? e.message : "student-login-error" } });
+    await logInteractionEvent({ tenantId, actorId: body.identityId, actorRole: "student", eventType: "LOGIN_FAILED", operationKey: `p16-slogin-fail-${randomUUID()}`, detail: { reason: e instanceof Error ? e.message : "student-login-error" } });
     if (!mapCapabilityError(res, e)) throw e;
   }
 });
