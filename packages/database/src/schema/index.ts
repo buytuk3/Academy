@@ -24,3 +24,6 @@ export * from "./engagement";
 
 // PHASE-15 — school onboarding + teacher assignment (§3.1/§3.2)
 export * from "./onboarding.js";
+
+// PHASE-16 — interaction events (§3.3)
+export * from "./interaction-events.js";

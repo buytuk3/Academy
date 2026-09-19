@@ -119,3 +119,8 @@ export type { AttendanceView, AttendanceStatus } from "./engagement/attendance.j
 export { OnboardingCapabilityError } from "./onboarding/capability.js";
 export { createSchoolRequest, listSchoolRequests, decideSchoolRequest, ensureTeachingSlots,
   listTeachingSlots, claimTeachingSlot, grantSlotOverride, listTenantSchools } from "./onboarding/capability.js";
+
+// PHASE-16 — interaction event log (§3.3)
+export { InteractionCapabilityError } from "./interaction/capability.js";
+export { recordInteractionEvent, listInteractionEvents } from "./interaction/capability.js";
+export type { InteractionEventType, RecordInteractionEventInput, InteractionEventView } from "./interaction/capability.js";

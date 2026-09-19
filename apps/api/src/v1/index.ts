@@ -16,6 +16,7 @@ import parents from "./parents.js";
 import principal from "./principal.js";
 import engagement from "./engagement.js";
 import onboarding from "./onboarding.js";
+import interactionEvents from "./interaction-events.js";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(parents);
 router.use(principal);
 router.use(engagement);
 router.use(onboarding);
+router.use(interactionEvents);
 
 export default router;
