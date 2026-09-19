@@ -1,3 +1,9 @@
+// PHASE-16 scoped matrix condition (p16-only, mirrors the p1 fix 8d1d3ff): this file
+// performs 6 legit auth flows inside one 60s window (2 staff logins in beforeAll +
+// 2 student logins + 1 intentionally-failed student login + 1 tenant-B student login);
+// the shared default (3/IP) 429s the tenant-B leg. auth-sec keeps MAX=3 and still
+// asserts the real 429 path in its own process.
+process.env.AUTH_RATE_LIMIT_MAX = "10";
 /**
  * PHASE-16 (INTERACTION-EVENT-LOG, governing doc v2.1 §3.3) — REAL E2E gate:
  * real Express app (thin /v1 adapters with fire-and-forget event hooks) + real
