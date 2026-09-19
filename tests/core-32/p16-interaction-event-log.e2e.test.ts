@@ -122,6 +122,15 @@ beforeAll(async () => {
   EXERCISE_NUM = ex.exercise.id;
   await dbmod.publishExercise(TENANT_A, EXERCISE_NUM, PRINCIPAL.sub);
 
+  // real staff logins — their LOGIN events carry studentId=null, so they sit
+  // OUTSIDE every student-filtered assertion below (staff surface is role-gated).
+  const la = await api("POST", "/v1/auth/login", { body: { email: TEACHER_A.email, password: "s3cretpass" } });
+  expect(la.status).toBe(200);
+  TEACHER_A.token = la.json.accessToken;
+  const lb = await api("POST", "/v1/auth/login", { body: { email: TEACHER_B.email, password: "s3cretpass" } });
+  expect(lb.status).toBe(200);
+  TEACHER_B.token = lb.json.accessToken;
+
   const { default: app } = await import("../../apps/api/src/app.js");
   server = app.listen(0, () => {
     base = `http://127.0.0.1:${(server!.address() as AddressInfo).port}`;
@@ -229,9 +238,10 @@ d("PHASE-16 — interaction event log over real HTTP + real PG (§3.3)", () => {
     STUDENT_B_TOKEN = loginB.json.accessToken;
     const bList = await api("GET", "/v1/interaction-events", { token: TEACHER_B.token });
     expect(bList.status).toBe(200);
-    const bItems = bList.body.items as Array<{ id: string; eventType: string }>;
-    expect(bItems.length).toBe(1); // only tenant-B's own LOGIN (fail-closed RLS)
-    expect(bItems[0].eventType).toBe("LOGIN");
+    const bItems = bList.body.items as Array<{ id: string; eventType: string; studentId: string | null }>;
+    // exactly ONE tenant-B STUDENT LOGIN (staff-B's LOGIN carries studentId=null);
+    // zero tenant-A event ids cross the boundary (fail-closed RLS)
+    expect(bItems.filter((e) => e.eventType === "LOGIN" && e.studentId === STUDENT_B1).length).toBe(1);
     for (const e of items) expect(bItems.some((x) => x.id === e.id)).toBe(false); // tenant-A ids invisible
   });
 });
