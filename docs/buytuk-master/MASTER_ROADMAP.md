@@ -60,7 +60,7 @@ Governing rules per phase (unchanged): build ONLY on the last closed byte-verifi
 |---|---|---|
 | PHASE-14 | PRODUCTION-DEPLOYMENT-CLOSURE (DEPL-2 + COV-1) | CLOSED / PASS — reference 1.17 @ `9425131` |
 | PHASE-15 | SCHOOL-ONBOARDING-AND-TEACHER-ASSIGNMENT (§3.1+§3.2) | CLOSED / PASS — reference 1.18 (this phase; highest commercial priority block with 16-17) |
-| PHASE-16 | INTERACTION-EVENT-LOG (§3.3) | after PHASE-15 approval |
+| PHASE-16 | INTERACTION-EVENT-LOG (§3.3) | CLOSED / PASS — reference 1.19 (interaction_events migration 0011 per ADR-037; fire-and-forget hooks; RLS fail-closed; real-timestamp proof) |
 | PHASE-17 | PROVISIONAL-ADVANCE-MASTERY-MODEL (§3.4) | after PHASE-16 approval |
 | PHASE-18 | SPACED-REVIEW-ENGINE (§3.5) | after PHASE-16 approval |
 | PHASE-19 | CROSS-STAGE-ESCALATION-ENGINE (§3.6) | after PHASE-17 approval |
