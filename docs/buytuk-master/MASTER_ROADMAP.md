@@ -66,7 +66,7 @@ Governing rules per phase (unchanged): build ONLY on the last closed byte-verifi
 | PHASE-19 | CROSS-STAGE-ESCALATION-ENGINE (§3.6) | CLOSED / PASS — reference 1.22 (migration 0014 per ADR-040; trigger ONLY from real §3.4 data; atomic ack; RLS fail-closed; ZERO new deps) |
 | PHASE-20 | GRAMMAR-PARSING-ENGINE / الإعراب (§3.7) | CLOSED / PASS — reference 1.23 (migration 0015 per ADR-041; REAL deterministic rules engine, pure TS, ZERO new deps; NEEDS_REVIEW no-guessing; RLS fail-closed) |
 | PHASE-21 | EXAM-BEHAVIORAL-ANALYTICS (§3.9) | CLOSED / PASS — reference 1.24 (migration 0016 per ADR-042; ALL metrics derived ONLY from the real interaction_events stream + canonical evidence chain; dashboard on existing RLS reads; ZERO new deps) |
-| PHASE-22 | VIDEO-LESSON-CONTENT (§3.8) | no structural dependencies (own ADR mandatory) |
+| PHASE-22 | VIDEO-LESSON-CONTENT (§3.8) | CLOSED / PASS — reference 1.25 (migration 0017 per ADR-043; existing content registry + loose storage pointer; atomic CAS publish; students read READY only; RLS fail-closed; ZERO new deps) |
 | PHASE-23 | STUDENT-ENGAGEMENT-EXTRAS (renumbered) | after PHASE-14 approval |
 | PHASE-24 | NOTIFICATIONS | after PHASE-14 approval |
 | PHASE-25 | EXAMS-MODULE | after PHASE-14 approval |
