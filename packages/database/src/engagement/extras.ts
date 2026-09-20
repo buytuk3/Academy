@@ -14,7 +14,7 @@
  *      rolling the whole transaction back (no phantom redemption row);
  *   3. parallel same-key calls converge (PostgreSQL ON CONFLICT semantics).
  */
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { withTenant } from "../tenancy.js";
 import {
   pointRedemptionsTable,
@@ -122,7 +122,7 @@ export async function redeemPoints(input: {
     // the whole tx (incl. the redemption row) rolls back.
     const [debited] = await tx
       .update(walletAccountsTable)
-      .set({ balance: walletAccountsTable.balance - input.cost })
+      .set({ balance: sql`${walletAccountsTable.balance} - ${input.cost}` })
       .where(
         and(
           eq(walletAccountsTable.tenantId, input.tenantId),
