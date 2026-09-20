@@ -36,3 +36,6 @@ export * from "./spaced-review.js";
 
 // PHASE-19 — cross-stage escalation engine (§3.6)
 export * from "./escalation.js";
+
+// PHASE-20 — grammar-parsing engine (§3.7)
+export * from "./grammar.js";

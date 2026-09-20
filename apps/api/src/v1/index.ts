@@ -20,6 +20,7 @@ import interactionEvents from "./interaction-events.js";
 import provisionalAdvance from "./provisional-advance.js";
 import spacedReview from "./spaced-review.js";
 import escalationsRouter from "./escalations.js";
+import grammarRouter from "./grammar.js";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(interactionEvents);
 router.use(provisionalAdvance);
 router.use(spacedReview);
 router.use(escalationsRouter);
+router.use(grammarRouter);
 
 export default router;

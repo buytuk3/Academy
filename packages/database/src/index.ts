@@ -141,3 +141,9 @@ export type { ReviewItemView, CompleteReviewInput, CompleteReviewResult, ReviewI
 export { EscalationError } from "./escalation/capability.js";
 export { evaluateEscalation, listEscalations, acknowledgeEscalation, ESCALATION_GAP_ATTEMPT_THRESHOLD } from "./escalation/capability.js";
 export type { EscalationView, EvaluateEscalationResult, AcknowledgeEscalationResult, EscalationStatus } from "./escalation/capability.js";
+
+// PHASE-20 — grammar-parsing engine (§3.7)
+export { GrammarParsingError } from "./grammar/capability.js";
+export { parseAndRecord, getGrammarParsing, listGrammarParsings } from "./grammar/capability.js";
+export { parseArabicGrammar, GRAMMAR_ENGINE_VERSION, NEEDS_REVIEW } from "./grammar/parser.js";
+export type { GrammarToken, GrammarParseResult, GrammarParsingView, ParseAndRecordResult } from "./grammar/capability.js";
