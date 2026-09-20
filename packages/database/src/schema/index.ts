@@ -42,3 +42,6 @@ export * from "./grammar.js";
 
 // PHASE-21 — exam-behavioral analytics (§3.9)
 export * from "./exam-analytics.js";
+
+// PHASE-22 — video-lesson content (§3.8)
+export * from "./video.js";

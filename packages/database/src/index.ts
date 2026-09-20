@@ -152,3 +152,8 @@ export type { GrammarToken, GrammarParseResult, GrammarParsingView, ParseAndReco
 export { ExamBehaviorError } from "./analytics/capability.js";
 export { computeExamBehavior, recordExamBehaviorSnapshot, listExamBehaviorSnapshots, BEHAVIOR_ENGINE_VERSION } from "./analytics/capability.js";
 export type { ExamBehaviorMetrics, ExamBehaviorSnapshotView, BehaviorSequenceEntry } from "./analytics/capability.js";
+
+// PHASE-22 — video-lesson content (§3.8)
+export { VideoLessonError } from "./video/capability.js";
+export { registerVideoLesson, publishVideoLesson, getVideoLesson, listVideoLessons } from "./video/capability.js";
+export type { VideoLessonView, PublishVideoLessonResult, VideoLessonStatus } from "./video/capability.js";

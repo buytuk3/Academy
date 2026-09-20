@@ -22,6 +22,7 @@ import spacedReview from "./spaced-review.js";
 import escalationsRouter from "./escalations.js";
 import grammarRouter from "./grammar.js";
 import examAnalytics from "./exam-analytics.js";
+import videoLessons from "./video-lessons.js";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(spacedReview);
 router.use(escalationsRouter);
 router.use(grammarRouter);
 router.use(examAnalytics);
+router.use(videoLessons);
 
 export default router;
