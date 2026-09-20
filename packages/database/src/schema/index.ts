@@ -39,3 +39,6 @@ export * from "./escalation.js";
 
 // PHASE-20 — grammar-parsing engine (§3.7)
 export * from "./grammar.js";
+
+// PHASE-21 — exam-behavioral analytics (§3.9)
+export * from "./exam-analytics.js";

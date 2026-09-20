@@ -21,6 +21,7 @@ import provisionalAdvance from "./provisional-advance.js";
 import spacedReview from "./spaced-review.js";
 import escalationsRouter from "./escalations.js";
 import grammarRouter from "./grammar.js";
+import examAnalytics from "./exam-analytics.js";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(provisionalAdvance);
 router.use(spacedReview);
 router.use(escalationsRouter);
 router.use(grammarRouter);
+router.use(examAnalytics);
 
 export default router;

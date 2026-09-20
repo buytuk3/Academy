@@ -147,3 +147,8 @@ export { GrammarParsingError } from "./grammar/capability.js";
 export { parseAndRecord, getGrammarParsing, listGrammarParsings } from "./grammar/capability.js";
 export { parseArabicGrammar, GRAMMAR_ENGINE_VERSION, NEEDS_REVIEW } from "./grammar/parser.js";
 export type { GrammarToken, GrammarParseResult, GrammarParsingView, ParseAndRecordResult } from "./grammar/capability.js";
+
+// PHASE-21 — exam-behavioral analytics (§3.9)
+export { ExamBehaviorError } from "./analytics/capability.js";
+export { computeExamBehavior, recordExamBehaviorSnapshot, listExamBehaviorSnapshots, BEHAVIOR_ENGINE_VERSION } from "./analytics/capability.js";
+export type { ExamBehaviorMetrics, ExamBehaviorSnapshotView, BehaviorSequenceEntry } from "./analytics/capability.js";
