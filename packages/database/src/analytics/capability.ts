@@ -19,6 +19,8 @@
  *                          their first submit's occurred_at.
  * The stored snapshot lets the principal class/school dashboard read ONE
  * row per student — existing RLS read paths only, zero new access logic.
+ * NOTE: studentsTable carries classId only; the school is resolved through
+ * the class (classesTable.schoolId) — the REAL membership chain.
  */
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { withTenant } from "../tenancy.js";
@@ -28,6 +30,7 @@ import {
   activityAttemptsTable,
   evidenceTable,
   studentsTable,
+  classesTable,
 } from "../schema/index.js";
 
 export class ExamBehaviorError extends Error {
@@ -116,9 +119,11 @@ export async function computeExamBehavior(q: {
       }
     }
 
-    // canonical attempt→evidence chain for correct/wrong (REAL rows only)
+    // canonical attempt→evidence chain for correct/wrong (REAL rows only):
+    // attempt.evidenceRef → evidence.errorType (null = correct, set = wrong —
+    // the E4-proven taxonomy, e.g. FINAL_ANSWER_ERROR).
     const attemptIds = [...new Set([...starts.keys(), ...submits.keys()])];
-    const evidenceById = new Map<string, { errorType: string | null }>();
+    const attemptRef = new Map<string, string>(); // attemptId → evidenceRef
     if (attemptIds.length > 0) {
       const attemptRows = await tx
         .select({ id: activityAttemptsTable.id, evidenceRef: activityAttemptsTable.evidenceRef })
@@ -130,31 +135,24 @@ export async function computeExamBehavior(q: {
             inArray(activityAttemptsTable.id, attemptIds),
           ),
         );
-      const refs = attemptRows.filter((r) => r.evidenceRef).map((r) => r.evidenceRef as string);
-      const evidenceRows = refs.length
-        ? await tx
-            .select({ id: evidenceTable.id, errorType: evidenceTable.errorType })
-            .from(evidenceTable)
-            .where(and(eq(evidenceTable.tenantId, q.tenantId), inArray(evidenceTable.id, refs)))
-        : [];
-      for (const row of evidenceRows) evidenceById.set(row.id, { errorType: row.errorType ?? null });
       for (const ar of attemptRows) {
-        if (ar.evidenceRef && !evidenceById.has(ar.evidenceRef)) {
-          const ev = evidenceRows.find((r) => r.id === ar.evidenceRef);
-          if (ev) evidenceById.set(ar.evidenceRef, { errorType: ev.errorType ?? null });
-        }
+        if (ar.evidenceRef) attemptRef.set(ar.id, ar.evidenceRef);
       }
-      // remember each attempt's evidenceRef for the classification pass
-      for (const ar of attemptRows) {
-        if (ar.evidenceRef) evidenceById.set(`attempt:${ar.id}`, { errorType: ar.evidenceRef });
-      }
+    }
+    const refs = [...attemptRef.values()];
+    const errorById = new Map<string, string | null>(); // evidenceId → errorType
+    if (refs.length > 0) {
+      const evidenceRows = await tx
+        .select({ id: evidenceTable.id, errorType: evidenceTable.errorType })
+        .from(evidenceTable)
+        .where(and(eq(evidenceTable.tenantId, q.tenantId), inArray(evidenceTable.id, refs)));
+      for (const row of evidenceRows) errorById.set(row.id, row.errorType ?? null);
     }
 
     let submissions = 0;
     let answerChanges = 0;
     let timeSum = 0;
     let timeSamples = 0;
-    const sequence: BehaviorSequenceEntry[] = [];
     let correctCount = 0;
     let wrongCount = 0;
     const classified: Array<{ attemptId: string; at: Date; correct: boolean }> = [];
@@ -167,24 +165,17 @@ export async function computeExamBehavior(q: {
         timeSum += sorted[sorted.length - 1].getTime() - startAt.getTime();
         timeSamples += 1;
       }
-      const refEntry = evidenceById.get(`attempt:${attemptId}`);
-      if (refEntry) {
-        const [evRow] = await tx
-          .select({ errorType: evidenceTable.errorType })
-          .from(evidenceTable)
-          .where(and(eq(evidenceTable.tenantId, q.tenantId), eq(evidenceTable.id, refEntry.errorType)));
-        if (evRow) {
-          const correct = evRow.errorType == null || evRow.errorType === "";
-          if (correct) correctCount += 1; else wrongCount += 1;
-          classified.push({ attemptId, at: sorted[0], correct });
-        }
+      const ref = attemptRef.get(attemptId);
+      if (ref && errorById.has(ref)) {
+        const err = errorById.get(ref);
+        const correct = err == null || err === "";
+        if (correct) correctCount += 1; else wrongCount += 1;
+        classified.push({ attemptId, at: sorted[0], correct });
       }
     }
-    sequence.push(
-      ...classified
-        .sort((a, b) => a.at.getTime() - b.at.getTime())
-        .map((c) => ({ attemptId: c.attemptId, occurredAt: c.at.toISOString(), correct: c.correct })),
-    );
+    const sequence: BehaviorSequenceEntry[] = classified
+      .sort((a, b) => a.at.getTime() - b.at.getTime())
+      .map((c) => ({ attemptId: c.attemptId, occurredAt: c.at.toISOString(), correct: c.correct }));
     return {
       questionsStarted: starts.size,
       submissions,
@@ -216,12 +207,20 @@ export async function recordExamBehaviorSnapshot(q: {
       );
     if (dup[0]) return { snapshot: toView(dup[0]), existed: true };
     const metrics = await computeExamBehavior({ tenantId: q.tenantId, studentId: q.studentId });
+    // REAL membership chain: student → class → school (studentsTable has NO
+    // schoolId column — the school lives on the class row).
     const [student] = await tx
-      .select({ classId: studentsTable.classId, schoolId: studentsTable.schoolId })
+      .select({ classId: studentsTable.classId })
       .from(studentsTable)
-      .where(
-        and(eq(studentsTable.tenantId, q.tenantId), eq(studentsTable.id, q.studentId)),
-      );
+      .where(and(eq(studentsTable.tenantId, q.tenantId), eq(studentsTable.id, q.studentId)));
+    let schoolId: string | null = null;
+    if (student?.classId) {
+      const [cls] = await tx
+        .select({ schoolId: classesTable.schoolId })
+        .from(classesTable)
+        .where(and(eq(classesTable.tenantId, q.tenantId), eq(classesTable.id, student.classId)));
+      schoolId = cls?.schoolId ?? null;
+    }
     const [row] = await tx
       .insert(examBehaviorSnapshotsTable)
       .values({
@@ -229,7 +228,7 @@ export async function recordExamBehaviorSnapshot(q: {
         tenantId: q.tenantId,
         studentId: q.studentId,
         classId: student?.classId ?? null,
-        schoolId: student?.schoolId ?? null,
+        schoolId,
         questionsStarted: metrics.questionsStarted,
         submissions: metrics.submissions,
         answerChanges: metrics.answerChanges,
