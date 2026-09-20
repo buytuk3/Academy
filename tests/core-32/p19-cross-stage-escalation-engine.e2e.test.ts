@@ -132,12 +132,13 @@ d("PHASE-19 — cross-stage escalation engine over real HTTP + real PG (§3.6)",
       body: { studentId: STUDENT_1, stageKey: stage, attemptId: `att-p19-${randomUUID()}`, passed: false },
       idempotencyKey: `p19-seed-${randomUUID()}`,
     });
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const r = await fail("PRIMARY");
       expect(r.status).toBe(200);
     }
     const adv = await fail("PRIMARY");
-    expect(adv.json.advanced).toBe(true); // provisional advance → debt PROVISIONAL_PENDING
+    expect(adv.status).toBe(201); // the §3.4 provisional advance is a REAL creation
+    expect(adv.json.advanced).toBe(true); // debt PROVISIONAL_PENDING (threshold=3 — the 3rd fail advances)
     // persistent gap on ANOTHER stage: 2 more real fails on PRIMARY-B19
     await fail("PRIMARY-B19");
     const g2 = await fail("PRIMARY-B19");
