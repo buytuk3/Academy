@@ -48,3 +48,6 @@ export * from "./video.js";
 
 // PHASE-23 — engagement extras (§5.2.3/§3.10)
 export * from "./engagement-extras.js";
+
+// PHASE-24 — notifications (§5.2.4)
+export * from "./notifications.js";

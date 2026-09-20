@@ -24,6 +24,7 @@ import grammarRouter from "./grammar.js";
 import examAnalytics from "./exam-analytics.js";
 import videoLessons from "./video-lessons.js";
 import engagementExtras from "./engagement-extras.js";
+import notifications from "./notifications.js";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(grammarRouter);
 router.use(examAnalytics);
 router.use(videoLessons);
 router.use(engagementExtras);
+router.use(notifications);
 
 export default router;

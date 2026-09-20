@@ -162,3 +162,8 @@ export type { VideoLessonView, PublishVideoLessonResult, VideoLessonStatus } fro
 export { EngagementExtrasError } from "./engagement/extras.js";
 export { redeemPoints, listRedemptions, addStudentNote, listStudentNotes, createSupportTicket, listSupportTickets, resolveSupportTicket } from "./engagement/extras.js";
 export type { RedemptionView, NoteView, TicketView } from "./engagement/extras.js";
+
+// PHASE-24 — notifications (§5.2.4)
+export { NotificationCenterError } from "./notifications/capability.js";
+export { createNotification, listNotifications, listTenantNotifications, getUnreadCount, markNotificationRead, upsertNotificationPrefs, getNotificationPrefs } from "./notifications/capability.js";
+export type { NotificationView, PrefsView, NotificationType, NotificationChannel, NotificationPrefs } from "./notifications/capability.js";
