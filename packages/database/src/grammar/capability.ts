@@ -40,7 +40,7 @@ const toView = (r: typeof grammarParsingsTable.$inferSelect): GrammarParsingView
   id: r.id,
   studentId: r.studentId,
   inputText: r.inputText,
-  tokens: (r.tokens ?? []) as GrammarToken[],
+  tokens: (r.tokens ?? []) as unknown as GrammarToken[],
   tokenCount: r.tokenCount,
   reviewCount: r.reviewCount,
   engineVersion: r.engineVersion,
@@ -127,3 +127,6 @@ export async function listGrammarParsings(q: {
     return rows.map(toView);
   });
 }
+
+// re-export the parser contract types (the index wiring imports them from here)
+export type { GrammarToken, GrammarParseResult } from "./parser.js";
