@@ -123,7 +123,7 @@ router.post("/video-lessons/:videoLessonId/publish", authenticate, authorize("te
         detail: { phase: "PHASE-22", videoLessonId: result.lesson.id, action: "publish" },
       });
     }
-    res.json({ ...viewOut(result.lesson), changed: result.changed, existed: result.existed });
+    res.json({ item: viewOut(result.lesson), changed: result.changed, existed: result.existed });
   } catch (e) {
     if (!vlError(res, e) && !mapCapabilityError(res, e)) throw e;
   }
