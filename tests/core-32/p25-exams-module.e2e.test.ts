@@ -165,15 +165,8 @@ d("PHASE-25 — exams over real HTTP + real PG (§5.2.1)", () => {
   });
 
   it("P25-2: /mine without answerKey; submit → exact auto-grade 2/3; replay → SAME id; double-submit 409; closed window 409", async () => {
-    const mine = await api("GET", "/v1/exams/mine", { token: STUDENT_TOKEN });
-    expect(mine.status).toBe(200);
-    const items = mine.body.items as any[];
-    // PUBLISHED only: the open exam + the closed-window exam (created below is
-    // separate) — the DRAFT must NOT appear
-    expect(items.length).toBe(2);
-    // ANSWER-KEY CONFIDENTIALITY: no leak over HTTP
-    expect(JSON.stringify(mine.body)).not.toContain("answerKey");
-    // closed-window exam for the window test
+    // closed-window PUBLISHED exam FIRST — both PUBLISHED exams must exist
+    // before the /mine assertion (the lifecycle is data-driven; no scheduler)
     const now = Date.now();
     const closed = await api("POST", "/v1/exams", {
       token: TEACHER_A.token, idempotencyKey: `p25-e2-${randomUUID()}`,
@@ -184,8 +177,15 @@ d("PHASE-25 — exams over real HTTP + real PG (§5.2.1)", () => {
       },
     });
     expect(closed.status).toBe(201);
-    // the atomic submission — one wrong answer of three
-    const EXAM = items[0].id as string;
+    const mine = await api("GET", "/v1/exams/mine", { token: STUDENT_TOKEN });
+    expect(mine.status).toBe(200);
+    const items = mine.body.items as any[];
+    // PUBLISHED only: the open exam + the closed-window exam — the DRAFT is invisible
+    expect(items.length).toBe(2);
+    // ANSWER-KEY CONFIDENTIALITY: no leak over HTTP
+    expect(JSON.stringify(mine.body)).not.toContain("answerKey");
+    // the atomic submission — one wrong answer of three (target the OPEN exam by title)
+    const EXAM = items.find((e) => e.title === "اختبار الوحدة الأولى")!.id as string;
     const K = `p25-s1-${randomUUID()}`;
     const s1 = await api("POST", `/v1/exams/${EXAM}/submit`, {
       token: STUDENT_TOKEN, idempotencyKey: K,
