@@ -64,7 +64,7 @@ Governing rules per phase (unchanged): build ONLY on the last closed byte-verifi
 | PHASE-17 | PROVISIONAL-ADVANCE-MASTERY-MODEL (§3.4) | CLOSED / PASS — reference 1.20 (migration 0012 per ADR-038; atomic DB-level advance; debt carried; RLS fail-closed; interaction_events as the only attempts source) |
 | PHASE-18 | SPACED-REVIEW-ENGINE (§3.5) | CLOSED / PASS — reference 1.21 (migration 0013 per ADR-039; fixed ladder 1/3/7/14/30; derivation ONLY from real §3.4 stage attempts; RLS fail-closed; ZERO new deps) |
 | PHASE-19 | CROSS-STAGE-ESCALATION-ENGINE (§3.6) | CLOSED / PASS — reference 1.22 (migration 0014 per ADR-040; trigger ONLY from real §3.4 data; atomic ack; RLS fail-closed; ZERO new deps) |
-| PHASE-20 | GRAMMAR-PARSING-ENGINE / الإعراب (§3.7) | no structural dependencies (own ADR mandatory) |
+| PHASE-20 | GRAMMAR-PARSING-ENGINE / الإعراب (§3.7) | CLOSED / PASS — reference 1.23 (migration 0015 per ADR-041; REAL deterministic rules engine, pure TS, ZERO new deps; NEEDS_REVIEW no-guessing; RLS fail-closed) |
 | PHASE-21 | EXAM-BEHAVIORAL-ANALYTICS (§3.9) | after PHASE-20 approval |
 | PHASE-22 | VIDEO-LESSON-CONTENT (§3.8) | no structural dependencies (own ADR mandatory) |
 | PHASE-23 | STUDENT-ENGAGEMENT-EXTRAS (renumbered) | after PHASE-14 approval |
