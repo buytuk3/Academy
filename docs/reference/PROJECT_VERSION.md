@@ -96,3 +96,9 @@ Starting-point anchoring: `VERSION` file = `BuyTuk.V.01.7`, `package.json` = `0.
 | Governance protocol | `docs/reference/MANDATORY_EXECUTION_PROTOCOL.md` |
 
 Git evidence verified in that earlier turn: local branch `main`, HEAD `1c57206`, upstream `origin/main` at `3ff0664`, ahead 1, tag `PENDING / NOT VERIFIED` at that time, no push. (Superseded: the tag has since been created and verified locally; the push remains blocked.)
+
+## Git evidence (2026-09-20 — PHASE-19 closeout / version 1.22 adoption)
+
+| الإصدار | الحالة | الدليل | التقرير | الأرشيف | التحقق |
+|---|---|---|---|---|---|
+| **BuyTuk Academy 1.22** (current — adopted at the PHASE-19 closeout, 2026-09-20; delivery: uploaded to the OWNER'S gofile account via the saved API token (endpoint /contents/uploadfile) with server-side md5/size echo match + the in-conversation single-file upload as the verified fallback channel. Preamble disclosure: PHASE-13/DEP-001 remains open (LAST after PHASE-26) — 1.22 includes NO audio-AI proof) | PHASE-19 — CLOSED / PASS (cross-stage escalation engine §3.6: migration 0014 per ADR-040, ZERO new dependencies, no scheduler/queue (DEV-019), trigger derived ONLY from real §3.4 stage_progressions data, atomic DB-level ack (P15-4 pattern), RLS fail-closed) | *(close commit + archive SHA-256 recorded in the closeout report + MANIFEST-PHASE19)* | docs/reports/PHASE-19-CROSS-STAGE-ESCALATION-ENGINE-CLOSEOUT-2026-09-20.md | buytuk-academy-COMPLETE-PROJECT-REFERENCE-POST-PHASE-19-2026-09-20.tar.gz | *(recorded at closeout — see MANIFEST-PHASE19)* |
