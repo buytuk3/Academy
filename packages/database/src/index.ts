@@ -136,3 +136,8 @@ export type { StageAttemptFact } from "./provisional/stage-attempts.js";
 export { SpacedReviewError } from "./spaced/capability.js";
 export { refreshReviewSchedule, completeReview, listDueReviews, SPACED_INTERVAL_DAYS, SPACED_TOP_BOX } from "./spaced/capability.js";
 export type { ReviewItemView, CompleteReviewInput, CompleteReviewResult, ReviewItemStatus } from "./spaced/capability.js";
+
+// PHASE-19 — cross-stage escalation engine (§3.6)
+export { EscalationError } from "./escalation/capability.js";
+export { evaluateEscalation, listEscalations, acknowledgeEscalation, ESCALATION_GAP_ATTEMPT_THRESHOLD } from "./escalation/capability.js";
+export type { EscalationView, EvaluateEscalationResult, AcknowledgeEscalationResult, EscalationStatus } from "./escalation/capability.js";

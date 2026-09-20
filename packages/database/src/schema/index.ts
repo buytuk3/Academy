@@ -33,3 +33,6 @@ export * from "./provisional-advance.js";
 
 // PHASE-18 — spaced-review engine (§3.5)
 export * from "./spaced-review.js";
+
+// PHASE-19 — cross-stage escalation engine (§3.6)
+export * from "./escalation.js";
