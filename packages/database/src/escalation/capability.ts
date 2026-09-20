@@ -190,7 +190,7 @@ export async function acknowledgeEscalation(input: {
       .where(
         and(
           eq(stageEscalationsTable.tenantId, input.tenantId),
-          eq(stageEscalationsTable.operationKey, input.operationKey),
+          eq(stageEscalationsTable.ackOperationKey, input.operationKey),
         ),
       );
     if (dup.length > 0) {
@@ -218,6 +218,7 @@ export async function acknowledgeEscalation(input: {
         status: "ACKNOWLEDGED",
         acknowledgedBy: input.teacherId,
         acknowledgedAt: new Date(),
+        ackOperationKey: input.operationKey,
         updatedAt: new Date(),
       })
       .where(

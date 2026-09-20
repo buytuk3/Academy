@@ -24,6 +24,7 @@ export const stageEscalationsTable = pgTable(
     status: text("status").notNull().default("OPEN"),
     acknowledgedBy: text("acknowledged_by"),
     acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    ackOperationKey: text("ack_operation_key"),
     operationKey: text("operation_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

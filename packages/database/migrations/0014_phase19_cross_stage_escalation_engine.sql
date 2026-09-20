@@ -47,3 +47,7 @@ BEGIN
       USING (tenant_id = current_setting('app.tenant_id', true));
   END IF;
 END $$;
+
+-- PHASE-19 ack idempotency (ADR-040): the ack operation key must be QUERYABLE
+-- for replay convergence (the ack is an UPDATE — the key must be persisted)
+ALTER TABLE stage_escalations ADD COLUMN IF NOT EXISTS ack_operation_key text;
