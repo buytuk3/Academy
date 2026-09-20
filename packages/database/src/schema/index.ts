@@ -45,3 +45,6 @@ export * from "./exam-analytics.js";
 
 // PHASE-22 — video-lesson content (§3.8)
 export * from "./video.js";
+
+// PHASE-23 — engagement extras (§5.2.3/§3.10)
+export * from "./engagement-extras.js";

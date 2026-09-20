@@ -23,6 +23,7 @@ import escalationsRouter from "./escalations.js";
 import grammarRouter from "./grammar.js";
 import examAnalytics from "./exam-analytics.js";
 import videoLessons from "./video-lessons.js";
+import engagementExtras from "./engagement-extras.js";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(escalationsRouter);
 router.use(grammarRouter);
 router.use(examAnalytics);
 router.use(videoLessons);
+router.use(engagementExtras);
 
 export default router;

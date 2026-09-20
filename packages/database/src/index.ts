@@ -157,3 +157,8 @@ export type { ExamBehaviorMetrics, ExamBehaviorSnapshotView, BehaviorSequenceEnt
 export { VideoLessonError } from "./video/capability.js";
 export { registerVideoLesson, publishVideoLesson, getVideoLesson, listVideoLessons } from "./video/capability.js";
 export type { VideoLessonView, PublishVideoLessonResult, VideoLessonStatus } from "./video/capability.js";
+
+// PHASE-23 — engagement extras (§5.2.3/§3.10)
+export { EngagementExtrasError } from "./engagement/extras.js";
+export { redeemPoints, listRedemptions, addStudentNote, listStudentNotes, createSupportTicket, listSupportTickets, resolveSupportTicket } from "./engagement/extras.js";
+export type { RedemptionView, NoteView, TicketView } from "./engagement/extras.js";
