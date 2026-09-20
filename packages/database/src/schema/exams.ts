@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
 /**
  * PHASE-25 — EXAMS-MODULE (§5.2.1: الامتحانات). Migration:
