@@ -68,9 +68,9 @@ Governing rules per phase (unchanged): build ONLY on the last closed byte-verifi
 | PHASE-21 | EXAM-BEHAVIORAL-ANALYTICS (§3.9) | CLOSED / PASS — reference 1.24 (migration 0016 per ADR-042; ALL metrics derived ONLY from the real interaction_events stream + canonical evidence chain; dashboard on existing RLS reads; ZERO new deps) |
 | PHASE-22 | VIDEO-LESSON-CONTENT (§3.8) | CLOSED / PASS — reference 1.25 (migration 0017 per ADR-043; existing content registry + loose storage pointer; atomic CAS publish; students read READY only; RLS fail-closed; ZERO new deps) |
 | PHASE-23 | STUDENT-ENGAGEMENT-EXTRAS (renumbered) | CLOSED / PASS — reference 1.26 (migration 0018 per ADR-044; atomic redemption on the EXISTING wallet_accounts; notes+support RLS fail-closed; ZERO new deps) |
-| PHASE-24 | NOTIFICATIONS | after PHASE-23 approval |
-| PHASE-25 | EXAMS-MODULE | after PHASE-23 approval |
-| PHASE-26 | CI/CD-AND-LOAD-TESTING | after PHASE-23 approval |
+| PHASE-24 | NOTIFICATIONS | CLOSED / PASS — reference 1.27 (migration 0019 per ADR-045; notification center RLS fail-closed; atomic CAS mark-read; per-user channel prefs; transports deferred DEV-024; ZERO new deps) |
+| PHASE-25 | EXAMS-MODULE | after PHASE-24 approval |
+| PHASE-26 | CI/CD-AND-LOAD-TESTING | after PHASE-24 approval |
 | PHASE-13 | AI-RUNTIME-PROOF (DEP-001) | **MOVED TO LAST (management ruling 2026-09-19)** — executes AFTER PHASE-26 closes; one consolidated GPU budget (approved $3–5) for a single final comprehensive proof on RunPod; never closes without real audio evidence (DEV-014 continues to apply until then) |
 Final sequencing ruling (management decision 2026-09-19, binding): PHASE-13 (AI-RUNTIME-PROOF) is moved to the END of the roadmap — it runs after PHASE-26 closes, not in parallel; every phase that does not need a GPU completes first, then the limited GPU budget is spent on ONE final consolidated proof (RunPod, approved initial budget $3–5; environment provisioning tracked separately). PHASE-16 opens on reference 1.18 @ `baf4247`.
 
