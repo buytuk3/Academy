@@ -167,3 +167,8 @@ export type { RedemptionView, NoteView, TicketView } from "./engagement/extras.j
 export { NotificationCenterError } from "./notifications/capability.js";
 export { createNotification, listNotifications, listTenantNotifications, getUnreadCount, markNotificationRead, upsertNotificationPrefs, getNotificationPrefs } from "./notifications/capability.js";
 export type { NotificationView, PrefsView, NotificationType, NotificationChannel, NotificationPrefs } from "./notifications/capability.js";
+
+// PHASE-25 — exams module (§5.2.1)
+export { ExamModuleError } from "./exams/capability.js";
+export { createExam, listExams, listStudentExams, submitExam, listExamSubmissions, listMyExamSubmissions } from "./exams/capability.js";
+export type { ExamView, ExamStaffView, ExamSubmissionView, ExamStatus } from "./exams/capability.js";

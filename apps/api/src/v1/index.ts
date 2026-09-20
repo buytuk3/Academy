@@ -25,6 +25,7 @@ import examAnalytics from "./exam-analytics.js";
 import videoLessons from "./video-lessons.js";
 import engagementExtras from "./engagement-extras.js";
 import notifications from "./notifications.js";
+import exams from "./exams.js";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(examAnalytics);
 router.use(videoLessons);
 router.use(engagementExtras);
 router.use(notifications);
+router.use(exams);
 
 export default router;

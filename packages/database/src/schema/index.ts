@@ -51,3 +51,6 @@ export * from "./engagement-extras.js";
 
 // PHASE-24 — notifications (§5.2.4)
 export * from "./notifications.js";
+
+// PHASE-25 — exams module (§5.2.1)
+export * from "./exams.js";
