@@ -172,3 +172,8 @@ export type { NotificationView, PrefsView, NotificationType, NotificationChannel
 export { ExamModuleError } from "./exams/capability.js";
 export { createExam, listExams, listStudentExams, submitExam, listExamSubmissions, listMyExamSubmissions } from "./exams/capability.js";
 export type { ExamView, ExamStaffView, ExamSubmissionView, ExamStatus } from "./exams/capability.js";
+
+// PHASE-27 — stuck-point alerts (§3.10)
+export { StuckPointError } from "./stuckpoint/capability.js";
+export { raiseStuckPointAlertFromEvent, listStuckPointAlerts } from "./stuckpoint/capability.js";
+export type { StuckPointAlertView, StuckOperationType } from "./stuckpoint/capability.js";

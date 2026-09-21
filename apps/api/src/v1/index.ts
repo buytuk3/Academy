@@ -26,6 +26,7 @@ import videoLessons from "./video-lessons.js";
 import engagementExtras from "./engagement-extras.js";
 import notifications from "./notifications.js";
 import exams from "./exams.js";
+import stuckPoints from "./stuck-points.js";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(videoLessons);
 router.use(engagementExtras);
 router.use(notifications);
 router.use(exams);
+router.use(stuckPoints);
 
 export default router;

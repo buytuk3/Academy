@@ -54,3 +54,6 @@ export * from "./notifications.js";
 
 // PHASE-25 — exams module (§5.2.1)
 export * from "./exams.js";
+
+// PHASE-27 — stuck-point alerts (§3.10)
+export * from "./stuck-point-alerts.js";
