@@ -18,6 +18,7 @@ process.env.AUTH_RATE_LIMIT_MAX = "10";
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Server } from "node:http";
@@ -178,8 +179,8 @@ d("PHASE-26 — CI/CD + load testing over real HTTP + real PG", () => {
     expect(yml).toContain("push");
     expect(yml).toContain("pull_request");
     // the in-repo scanner exits 0 right now (tree-wide)
-    const rc = execFileSync("python3", [SCANNER], { stdio: "pipe" });
-    expect(rc).toBeDefined(); // non-throwing execFile = exit 0
+    const scan = spawnSync("python3", [SCANNER], { encoding: "utf-8" });
+    expect(scan.status).toBe(0);
   });
 
   it("P26-2: load test the REAL app — zero errors, zero non-200s, p95 within budget", async () => {
