@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """PHASE-26 - pure-python secrets scanner (same regex set as the phase
-finalizers). Exit 1 on any hit - CI blocks the merge."""
+finalizers). Scans GIT-TRACKED files only (what CI actually sees; the local
+.env is untracked by design). Exit 1 on any hit - CI blocks the merge."""
 import os
 import re
+import subprocess
 import sys
 
 SECRET_RE = re.compile(r'(api[_-]?key|apikey|secret|passwd|password|token|access[_-]?key)["\']?\s*[:=]\s*["\'][A-Za-z0-9/+_.-]{16,}["\']', re.I)
@@ -24,9 +26,9 @@ def scan(path):
 
 
 total = 0
-for root, dirs, files in os.walk("."):
-    dirs[:] = [d for d in dirs if d not in (".git", "node_modules", "dist", "coverage")]
-    for name in files:
-        total += scan(os.path.join(root, name))
+tracked = subprocess.run(["git", "ls-files"], capture_output=True, text=True).stdout.splitlines()
+for path in tracked:
+    if os.path.isfile(path):
+        total += scan(path)
 print("secret-scan: %d hit(s)" % total)
 sys.exit(1 if total else 0)
