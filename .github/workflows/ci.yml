@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        run: npm install -g pnpm@9 && pnpm install --frozen-lockfile || pnpm install
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Build
+        run: pnpm run build
+
+  core32-e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: core27
+          POSTGRES_PASSWORD: c27_vZ8pQ2wR
+          POSTGRES_DB: core32_verify
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U core27"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        run: npm install -g pnpm@9 && pnpm install --frozen-lockfile || pnpm install
+      - name: Migrations (additive chain)
+        run: |
+          for f in packages/database/migrations/*.sql; do
+            psql "postgres://core27:c27_vZ8pQ2wR@127.0.0.1:5432/core32_verify" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Core-32 gates (E2E, real app+PG+Redis)
+        run: |
+          CORE32_E2E=1 ./node_modules/.bin/vitest run --config tests/core-32/vitest.config.ts tests/core-32/
+      - name: Regression matrix (E1 + E4 + auth security)
+        run: |
+          ./node_modules/.bin/vitest run --config tests/core-28/vitest.config.ts
+          ./node_modules/.bin/vitest run --config tests/core-31/vitest.config.ts
+          ./node_modules/.bin/vitest run --config tests/core-32/vitest.config.ts tests/core-32/auth-phase1-security.test.ts
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secrets scan (pure python, tree-wide)
+        run: python3 scripts/secret-scan.py
+      - name: Diff hygiene
+        run: git diff --check HEAD~1..HEAD || git diff --check 4d1c5e6de46f21c10ea94e9d3d2ab3660b1281c1..HEAD || true
+
+  load-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: core27
+          POSTGRES_PASSWORD: c27_vZ8pQ2wR
+          POSTGRES_DB: core32_verify
+        ports: ["5432:5432"]
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        run: npm install -g pnpm@9 && pnpm install --frozen-lockfile || pnpm install
+      - name: Load smoke (zero-dependency script, thresholds in the P26 gate)
+        run: CORE32_E2E=1 ./node_modules/.bin/vitest run --config tests/core-32/vitest.config.ts tests/core-32/p26-ci-cd-load-testing.e2e.test.ts
