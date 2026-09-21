@@ -94,6 +94,18 @@ router.post("/points/redeem", authenticate, authorize("student"), async (req: Re
       existed: result.existed,
     });
   } catch (e) {
+    // PHASE-27: the REAL payment failure surfaces as an ERROR event on the
+    // 0011 path (the stuck-point hook fans out from there — ADR-048).
+    if (e instanceof EngagementExtrasError) {
+      await logInteractionEvent({
+        tenantId: user.tenantId,
+        actorId: user.sub,
+        actorRole: user.role,
+        eventType: "ERROR",
+        operationKey: `p27-err-${idem}`,
+        detail: { surface: "points/redeem", reason: e.code, phase: "PHASE-27" },
+      });
+    }
     if (!exError(res, e) && !mapCapabilityError(res, e)) throw e;
   }
 });

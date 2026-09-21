@@ -1,3 +1,4 @@
+import { raiseStuckPointAlertFromEvent } from "@workspace/db";
 /**
  * PHASE-16 (INTERACTION-EVENT-LOG, governing doc v2.1 §3.3) — /v1 surface:
  * THIN ADAPTER over the canonical interaction capability (@workspace/db) —
@@ -30,7 +31,19 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  */
 export async function logInteractionEvent(input: RecordInteractionEventInput): Promise<void> {
   try {
-    await recordInteractionEvent(input);
+    const rec = await recordInteractionEvent(input);
+    // PHASE-27 stuck-point hook (§3.10 / ADR-048): the REAL failure classes of
+    // the 0011 vocabulary (LOGIN_FAILED / ERROR — CHECK untouched) raise the
+    // manager alert IMMEDIATELY, derived FROM the real event row (zero
+    // fabrication); the alert must never break the main request (the §3.3
+    // fire-and-forget chain).
+    if (rec && !rec.existed && (input.eventType === "LOGIN_FAILED" || input.eventType === "ERROR")) {
+      try {
+        await raiseStuckPointAlertFromEvent({ tenantId: input.tenantId, sourceEventId: rec.id });
+      } catch {
+        /* alert fan-out must never break the main request */
+      }
+    }
   } catch {
     /* event log must never break the main request */
   }
