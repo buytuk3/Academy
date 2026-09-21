@@ -198,10 +198,15 @@ d("PHASE-26 — CI/CD + load testing over real HTTP + real PG", () => {
     expect(rep2.errors).toBe(0);
     expect(rep2.non200).toBe(0);
     expect(rep2.p99).toBeGreaterThan(0);
-    // RLS fail-closed STILL enforced after the concurrent load
+    // RLS fail-closed STILL enforced after the concurrent load: tenant-B sees
+    // ONLY its OWN tenant events (TEACHER_B's own LOGIN from beforeAll — the
+    // fire-and-forget §3.3 hook) and ZERO tenant-A rows (charter semantics:
+    // zero TENANT-A rows, not an empty list — the P16 cross-tenant precedent)
     const cross = await api("GET", "/v1/interaction-events", { token: TEACHER_B.token });
     expect(cross.status).toBe(200);
-    expect((cross.body.items as unknown[]).length).toBe(0);
+    const crossItems = cross.body.items as any[];
+    expect(crossItems.length).toBe(1); // TEACHER_B's own LOGIN event only
+    expect(crossItems.every((e) => e.actorId !== TEACHER_A.sub && e.actorId !== STUDENT_1)).toBe(true);
     const crossExams = await api("GET", "/v1/exams", { token: TEACHER_B.token });
     expect(crossExams.status).toBe(200);
     expect((crossExams.body.items as unknown[]).length).toBe(0);
