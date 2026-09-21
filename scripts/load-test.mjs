@@ -39,7 +39,7 @@ async function worker() {
     done += 1;
     const t0 = performance.now();
     try {
-      const res = await fetch(base + path, { headers });
+      const res = await fetch(base + path, { headers, signal: AbortSignal.timeout(8000) });
       if (res.status !== 200) non200 += 1;
       await res.arrayBuffer();
     } catch {
@@ -71,3 +71,4 @@ const report = {
 };
 writeFileSync(values.out, JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report));
+process.exit(0);

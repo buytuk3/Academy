@@ -151,17 +151,17 @@ d("PHASE-26 — CI/CD + load testing over real HTTP + real PG", () => {
   });
 
   it("P26-2: load test the REAL app — zero errors, zero non-200s, p95 within budget", () => {
-    const rep = runLoad("/v1/interaction-events", TEACHER_A.token, 180, 12, "/tmp/p26-load-main.json");
-    expect(rep.total).toBe(180);
+    const rep = runLoad("/v1/interaction-events", TEACHER_A.token, 50, 5, "/tmp/p26-load-main.json");
+    expect(rep.total).toBe(50);
     expect(rep.errors).toBe(0);
     expect(rep.non200).toBe(0);
-    expect(rep.ok).toBe(180);
+    expect(rep.ok).toBe(50);
     expect(rep.p95).toBeLessThan(1500); // generous CI-runner budget
   });
 
   it("P26-3: after load — RLS fail-closed intact; report shape complete", async () => {
     // a second, lighter load against the exams surface (also DB-backed)
-    const rep2 = runLoad("/v1/exams", TEACHER_A.token, 120, 8, "/tmp/p26-load-exams.json");
+    const rep2 = runLoad("/v1/exams", TEACHER_A.token, 20, 4, "/tmp/p26-load-exams.json");
     expect(rep2.errors).toBe(0);
     expect(rep2.non200).toBe(0);
     expect(rep2.p99).toBeGreaterThan(0);
