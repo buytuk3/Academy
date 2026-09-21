@@ -18,7 +18,6 @@ process.env.AUTH_RATE_LIMIT_MAX = "10";
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Server } from "node:http";
@@ -120,12 +119,45 @@ beforeAll(async () => {
   TEACHER_B.token = lb.body.accessToken;
 });
 
-function runLoad(path: string, token: string, total: number, concurrency: number, out: string): any {
-  execFileSync(process.execPath, [
-    LOAD, "--base", base, "--path", path, "--token", token,
-    "--concurrency", String(concurrency), "--total", String(total), "--out", out,
-  ], { stdio: ["ignore", "ignore", "inherit"], timeout: 120_000 });
-  return JSON.parse(readFileSync(out, "utf-8"));
+async function runLoad(path: string, token: string, total: number, concurrency: number, out: string): Promise<any> {
+  // IN-PROCESS load drive — the SAME zero-dependency algorithm as
+  // scripts/load-test.mjs (the standalone CI/manual runner). The sandbox
+  // blocks child-process networking (every child fetch stalls until abort),
+  // so the gate drives the identical loop in-process over the PROVEN fetch path.
+  const headers: Record<string, string> = { authorization: `Bearer ${token}` };
+  const latencies: number[] = [];
+  let errors = 0;
+  let non200 = 0;
+  let done = 0;
+  async function worker(): Promise<void> {
+    while (done < total) {
+      done += 1;
+      const t0 = performance.now();
+      try {
+        const res = await fetch(base + path, { headers, signal: AbortSignal.timeout(8000) });
+        if (res.status !== 200) non200 += 1;
+        await res.arrayBuffer();
+      } catch {
+        errors += 1;
+      }
+      latencies.push(performance.now() - t0);
+    }
+  }
+  const t0 = performance.now();
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  const wallMs = performance.now() - t0;
+  latencies.sort((a, b) => a - b);
+  const pct = (p: number) => latencies[Math.min(latencies.length - 1, Math.floor((p / 100) * latencies.length))] ?? 0;
+  const report = {
+    base, path, concurrency, total,
+    ok: latencies.length - errors - non200,
+    errors, non200,
+    wallMs: Math.round(wallMs),
+    rps: Number((total / (wallMs / 1000)).toFixed(2)),
+    p50: Math.round(pct(50)), p95: Math.round(pct(95)), p99: Math.round(pct(99)),
+  };
+  writeFileSync(out, JSON.stringify(report, null, 2));
+  return report;
 }
 
 d("PHASE-26 — CI/CD + load testing over real HTTP + real PG", () => {
@@ -150,8 +182,8 @@ d("PHASE-26 — CI/CD + load testing over real HTTP + real PG", () => {
     expect(rc).toBeDefined(); // non-throwing execFile = exit 0
   });
 
-  it("P26-2: load test the REAL app — zero errors, zero non-200s, p95 within budget", () => {
-    const rep = runLoad("/v1/interaction-events", TEACHER_A.token, 50, 5, "/tmp/p26-load-main.json");
+  it("P26-2: load test the REAL app — zero errors, zero non-200s, p95 within budget", async () => {
+    const rep = await runLoad("/v1/interaction-events", TEACHER_A.token, 50, 5, "/tmp/p26-load-main.json");
     expect(rep.total).toBe(50);
     expect(rep.errors).toBe(0);
     expect(rep.non200).toBe(0);
@@ -161,7 +193,7 @@ d("PHASE-26 — CI/CD + load testing over real HTTP + real PG", () => {
 
   it("P26-3: after load — RLS fail-closed intact; report shape complete", async () => {
     // a second, lighter load against the exams surface (also DB-backed)
-    const rep2 = runLoad("/v1/exams", TEACHER_A.token, 20, 4, "/tmp/p26-load-exams.json");
+    const rep2 = await runLoad("/v1/exams", TEACHER_A.token, 20, 4, "/tmp/p26-load-exams.json");
     expect(rep2.errors).toBe(0);
     expect(rep2.non200).toBe(0);
     expect(rep2.p99).toBeGreaterThan(0);
