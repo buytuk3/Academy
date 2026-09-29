@@ -1,9 +1,0 @@
-[phases.build]
-nixPkgs = ["bash"]
-cmds = ["pnpm run build"]
-
-[phases.install]
-cmds = ["npm install -g pnpm@9", "pnpm install --frozen-lockfile --ignore-scripts"]
-
-[start]
-cmd = "node apps/api/dist/index.mjs"

@@ -5,7 +5,7 @@ WORKDIR /app
 # Install bash
 RUN apt-get update && apt-get install -y bash && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Copy package files first
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install pnpm
